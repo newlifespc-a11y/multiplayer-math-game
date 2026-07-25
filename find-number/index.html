@@ -18,7 +18,7 @@
             <p class="text-xs text-slate-400">สแกน QR Code แล้ววิ่งชนตัวเลขคำตอบที่ถูกต้องบนกระดาน!</p>
         </div>
         <div class="flex items-center gap-3">
-            <button onclick="startGame()" class="bg-emerald-500 hover:bg-emerald-600 px-5 py-2 rounded-lg font-bold text-white shadow transition text-sm">เริ่มเกม (5 ข้อ)</button>
+            <button onclick="startGame()" class="bg-emerald-500 hover:bg-emerald-600 px-5 py-2 rounded-lg font-bold text-white shadow transition text-sm">เริ่มเกม</button>
             <button onclick="resetGame()" class="bg-rose-600 hover:bg-rose-700 px-4 py-2 rounded-lg font-bold text-white shadow transition text-sm">รีเซ็ตเกม</button>
         </div>
     </header>
@@ -43,9 +43,9 @@
             <!-- Question Box Display Header -->
             <div class="bg-slate-900 p-4 rounded-xl border border-slate-700 text-center mb-4 flex justify-between items-center px-6">
                 <div class="text-left">
-                    <span id="round-label" class="text-xs font-bold bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 px-3 py-1 rounded-full">ข้อที่ 1 / 5</span>
+                    <span id="round-label" class="text-xs font-bold bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 px-3 py-1 rounded-full">รอเริ่มเกม</span>
                 </div>
-                <div id="question-text" class="text-4xl font-black text-cyan-300 tracking-wider">
+                <div id="question-text" class="text-3xl font-black text-cyan-300 tracking-wider">
                     กด "เริ่มเกม" เพื่อเริ่มสุ่มโจทย์
                 </div>
                 <div id="game-status" class="text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-full">
@@ -73,6 +73,7 @@
 
         let playersData = {};
         let currentGameState = {};
+        let isProcessingHit = false; // Flag ป้องกันการชนซ้ำรวดเดียว
 
         const playerUrl = "https://newlifespc-a11y.github.io/multiplayer-math-game/find-number/player.html";
         new QRCode(document.getElementById("qrcode"), { text: playerUrl, width: 140, height: 140 });
@@ -103,11 +104,12 @@
                 statusEl.className = "text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full";
             } else if (currentGameState.status === 'FINISHED') {
                 qEl.innerText = "🏆 จบการแข่งขันแล้ว!";
+                roundEl.innerText = "จบเกม";
                 statusEl.innerText = "สถานะ: จบเกม";
                 statusEl.className = "text-xs font-semibold bg-purple-500/20 text-purple-300 border border-purple-500/30 px-3 py-1 rounded-full";
             } else {
                 qEl.innerText = 'กด "เริ่มเกม" เพื่อเริ่มสุ่มโจทย์';
-                roundEl.innerText = `ข้อที่ 1 / 5`;
+                roundEl.innerText = 'รอเริ่มเกม';
                 statusEl.innerText = "สถานะ: รอเริ่มต้น";
                 statusEl.className = "text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-full";
             }
@@ -184,25 +186,34 @@
         }
 
         function checkCollisions() {
-            if (currentGameState.status !== 'PLAYING' || !currentGameState.options) return;
+            if (currentGameState.status !== 'PLAYING' || !currentGameState.options || isProcessingHit) return;
 
             const targetVal = currentGameState.correctAnswer;
             const targetOpt = currentGameState.options.find(o => o.val === targetVal);
             if (!targetOpt) return;
 
             Object.keys(playersData).forEach(pId => {
+                if (isProcessingHit) return;
                 const p = playersData[pId];
                 const dist = Math.hypot(p.x - targetOpt.x, p.y - targetOpt.y);
 
-                if (dist < 6) { // วิ่งชนคำตอบถูกต้อง
+                if (dist < 6) { 
+                    isProcessingHit = true; // ล็อคไม่ให้ประมวลผลซ้ำ
                     let newScore = (p.score || 0) + 1;
+                    
                     db.ref('players/' + pId + '/score').set(newScore);
 
-                    let nextRound = (currentGameState.currentRound || 1) + 1;
+                    let currentRound = currentGameState.currentRound || 1;
+                    let nextRound = currentRound + 1;
+
                     if (nextRound > 5) {
-                        db.ref('gameState').update({ status: 'FINISHED' });
+                        db.ref('gameState').set({ status: 'FINISHED' });
+                        isProcessingHit = false;
                     } else {
-                        generateNextQuestion(nextRound);
+                        setTimeout(() => {
+                            generateNextQuestion(nextRound);
+                            isProcessingHit = false;
+                        }, 300); // เว้นจังหวะ 0.3 วินาทีก่อนเปลี่ยนข้อ
                     }
                 }
             });
@@ -264,7 +275,8 @@
         }
 
         function startGame() {
-            // ล้างคะแนนผู้เล่นเก่าก่อนเริ่มเกมใหม่
+            isProcessingHit = false;
+            // รีเซ็ตคะแนนผู้เล่นทุกคนเป็น 0
             Object.keys(playersData).forEach(pId => {
                 db.ref('players/' + pId + '/score').set(0);
             });
@@ -273,6 +285,7 @@
 
         function resetGame() {
             if (confirm("ต้องการรีเซ็ตเกมและลบผู้เล่นทั้งหมดใช่หรือไม่?")) {
+                isProcessingHit = false;
                 db.ref('players').set({});
                 db.ref('gameState').set({ status: 'WAITING' });
             }
