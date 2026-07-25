@@ -14,39 +14,51 @@
     <!-- Header Section -->
     <header class="p-4 bg-slate-800 flex justify-between items-center border-b border-slate-700">
         <div>
-            <h1 class="text-2xl font-bold text-yellow-400">🏃 ลานประลองสีฟ้า (Host Area)</h1>
-            <p class="text-xs text-slate-400">สแกน QR Code เพื่อสร้างตัวละครและลงสนามทันที</p>
+            <h1 class="text-2xl font-bold text-yellow-400">🏃 Math Runner Grand Prix</h1>
+            <p class="text-xs text-slate-400">สแกน QR Code แล้ววิ่งชนตัวเลขคำตอบที่ถูกต้องบนกระดาน!</p>
         </div>
-        <div>
-            <button onclick="resetGame()" class="bg-rose-600 hover:bg-rose-700 px-4 py-2 rounded-lg font-bold text-white shadow transition text-sm">รีเซ็ตผู้เล่นทั้งหมด</button>
+        <div class="flex items-center gap-3">
+            <button onclick="startGame()" class="bg-emerald-500 hover:bg-emerald-600 px-5 py-2 rounded-lg font-bold text-white shadow transition text-sm">เริ่มเกม (5 ข้อ)</button>
+            <button onclick="resetGame()" class="bg-rose-600 hover:bg-rose-700 px-4 py-2 rounded-lg font-bold text-white shadow transition text-sm">รีเซ็ตเกม</button>
         </div>
     </header>
 
     <div class="flex-1 flex flex-col md:flex-row p-4 gap-4">
-        <!-- Sidebar: QR Code & Player List -->
+        <!-- Sidebar: QR Code & Scoreboard -->
         <div class="w-full md:w-1/4 bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col items-center">
-            <h2 class="text-lg font-bold mb-2 text-center text-cyan-400">สแกนเพื่อเข้าร่วม</h2>
+            <h2 class="text-lg font-bold mb-2 text-center text-cyan-400">สแกนเพื่อเล่นเกม</h2>
             <div id="qrcode" class="bg-white p-3 rounded-lg shadow-md mb-4"></div>
             
             <h3 class="font-semibold text-slate-300 w-full border-b border-slate-600 pb-1 mb-2">
-                ตัวละครในสนาม (<span id="player-count">0</span>)
+                อันดับคะแนน (<span id="player-count">0</span> คน)
             </h3>
             <ul id="player-join-list" class="w-full flex-1 overflow-y-auto space-y-2 text-sm">
                 <li class="text-slate-500 text-center italic py-4">กำลังรอผู้เล่นสแกน...</li>
             </ul>
         </div>
 
-        <!-- Main Sky Arena View -->
+        <!-- Main Display View -->
         <div class="flex-1 bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col">
-            <div class="flex justify-between items-center mb-2">
-                <h2 class="text-xl font-bold text-slate-200">ลานประลองความเร็ว</h2>
+            
+            <!-- Question Box Display Header -->
+            <div class="bg-slate-900 p-4 rounded-xl border border-slate-700 text-center mb-4 flex justify-between items-center px-6">
+                <div class="text-left">
+                    <span id="round-label" class="text-xs font-bold bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 px-3 py-1 rounded-full">ข้อที่ 1 / 5</span>
+                </div>
+                <div id="question-text" class="text-4xl font-black text-cyan-300 tracking-wider">
+                    กด "เริ่มเกม" เพื่อเริ่มสุ่มโจทย์
+                </div>
+                <div id="game-status" class="text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-full">
+                    สถานะ: รอเริ่มต้น
+                </div>
             </div>
 
-            <!-- Solid Light Blue Arena Container (ไร้จุด) -->
-            <div id="arena-container" class="flex-1 bg-sky-200 rounded-xl relative border-4 border-sky-400 shadow-inner overflow-hidden min-h-[450px]">
-                <div id="players-layer" class="w-full h-full relative">
-                    <!-- Dynamic player avatars render here -->
-                </div>
+            <!-- Solid Light Blue Arena Container (ไร้คำว่า ลานประลอง) -->
+            <div id="arena-container" class="flex-1 bg-sky-200 rounded-xl relative border-4 border-sky-400 shadow-inner overflow-hidden min-h-[420px]">
+                <!-- Target Options Layer -->
+                <div id="options-layer" class="w-full h-full absolute inset-0"></div>
+                <!-- Players Avatar Layer -->
+                <div id="players-layer" class="w-full h-full absolute inset-0"></div>
             </div>
         </div>
     </div>
@@ -60,23 +72,48 @@
         const db = firebase.database();
 
         let playersData = {};
+        let currentGameState = {};
 
-        // QR Code pointing directly to player.html
         const playerUrl = "https://newlifespc-a11y.github.io/multiplayer-math-game/find-number/player.html";
-        new QRCode(document.getElementById("qrcode"), {
-            text: playerUrl,
-            width: 140,
-            height: 140
-        });
+        new QRCode(document.getElementById("qrcode"), { text: playerUrl, width: 140, height: 140 });
 
-        // Sync Players Position Realtime
+        // Listen for Realtime Players & Game State
         db.ref('players').on('value', (snapshot) => {
             playersData = snapshot.val() || {};
-            renderArena();
-            updateJoinList();
+            renderPlayers();
+            updateScoreboard();
+            checkCollisions(); // Check if any player hit the correct answer
         });
 
-        function updateJoinList() {
+        db.ref('gameState').on('value', (snapshot) => {
+            currentGameState = snapshot.val() || {};
+            updateUIState();
+            renderOptions();
+        });
+
+        function updateUIState() {
+            const qEl = document.getElementById('question-text');
+            const roundEl = document.getElementById('round-label');
+            const statusEl = document.getElementById('game-status');
+
+            if (currentGameState.status === 'PLAYING') {
+                qEl.innerText = currentGameState.question || "กำลังโหลดโจทย์...";
+                roundEl.innerText = `ข้อที่ ${currentGameState.currentRound || 1} / 5`;
+                statusEl.innerText = "สถานะ: กำลังแข่งขัน 🔥";
+                statusEl.className = "text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full";
+            } else if (currentGameState.status === 'FINISHED') {
+                qEl.innerText = "🏆 จบการแข่งขันแล้ว!";
+                statusEl.innerText = "สถานะ: จบเกม";
+                statusEl.className = "text-xs font-semibold bg-purple-500/20 text-purple-300 border border-purple-500/30 px-3 py-1 rounded-full";
+            } else {
+                qEl.innerText = 'กด "เริ่มเกม" เพื่อเริ่มสุ่มโจทย์';
+                roundEl.innerText = `ข้อที่ 1 / 5`;
+                statusEl.innerText = "สถานะ: รอเริ่มต้น";
+                statusEl.className = "text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-full";
+            }
+        }
+
+        function updateScoreboard() {
             const listEl = document.getElementById('player-join-list');
             const countEl = document.getElementById('player-count');
             const keys = Object.keys(playersData);
@@ -87,50 +124,160 @@
                 return;
             }
 
-            listEl.innerHTML = keys.map((id) => {
+            // Sort by score descending
+            const sortedKeys = keys.sort((a,b) => (playersData[b].score || 0) - (playersData[a].score || 0));
+
+            listEl.innerHTML = sortedKeys.map((id, idx) => {
                 const p = playersData[id];
-                const avatar = p.avatar || '🐯';
                 return `<li class="flex items-center justify-between bg-slate-700/50 p-2 rounded border border-slate-600">
                     <span class="font-medium flex items-center gap-2">
-                        <span class="text-base">${avatar}</span>
+                        <span class="text-xs bg-yellow-500 text-slate-900 font-bold px-1.5 py-0.5 rounded-full">#${idx+1}</span>
+                        <span class="text-base">${p.avatar || '🐯'}</span>
                         ${p.name}
                     </span>
-                    <span class="text-xs text-sky-300">x: ${Math.round(p.x)}%, y: ${Math.round(p.y)}%</span>
+                    <span class="text-xs font-bold text-yellow-400 bg-slate-800 px-2 py-1 rounded">คะแนน: ${p.score || 0}</span>
                 </li>`;
             }).join('');
         }
 
-        function renderArena() {
+        function renderPlayers() {
             const container = document.getElementById('players-layer');
             const keys = Object.keys(playersData);
 
             if (keys.length === 0) {
-                container.innerHTML = '<div class="absolute inset-0 flex items-center justify-center text-slate-500 font-bold text-lg">ยังไม่มีผู้เล่นในสนาม (สแกน QR Code เพื่อเข้ามาได้เลย)</div>';
+                container.innerHTML = '<div class="absolute inset-0 flex items-center justify-center text-slate-500 font-bold text-lg">ยังไม่มีผู้เล่นในสนาม</div>';
                 return;
             }
 
             container.innerHTML = keys.map((id) => {
                 const p = playersData[id];
-                const avatar = p.avatar || '🐯';
                 const x = p.x !== undefined ? p.x : 50;
                 const y = p.y !== undefined ? p.y : 50;
 
                 return `
-                <div class="absolute transition-all duration-75 ease-out flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2" 
+                <div class="absolute transition-all duration-75 ease-out flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2 z-20" 
                      style="left: ${x}%; top: ${y}%;">
-                    <div class="text-3xl filter drop-shadow-md hover:scale-110 transition">
-                        ${avatar}
+                    <div class="text-3xl filter drop-shadow-md">
+                        ${p.avatar || '🐯'}
                     </div>
-                    <span class="mt-0.5 text-[9px] font-medium bg-slate-900/80 text-white px-1.5 py-0.2 rounded shadow whitespace-nowrap">
-                        ${p.name}
+                    <span class="text-[9px] font-medium bg-slate-900/80 text-white px-1.5 py-0.2 rounded shadow whitespace-nowrap">
+                        ${p.name} (${p.score || 0})
                     </span>
                 </div>`;
             }).join('');
         }
 
+        function renderOptions() {
+            const container = document.getElementById('options-layer');
+            if (currentGameState.status !== 'PLAYING' || !currentGameState.options) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = currentGameState.options.map((opt) => `
+                <div class="absolute transform -translate-x-1/2 -translate-y-1/2 bg-white/90 border-2 border-sky-600 text-slate-900 font-black text-xl rounded-2xl w-14 h-14 flex items-center justify-center shadow-lg z-10"
+                     style="left: ${opt.x}%; top: ${opt.y}%;">
+                    ${opt.val}
+                </div>
+            `).join('');
+        }
+
+        // Logic Check Collision between Players & Correct Option Target
+        function checkCollisions() {
+            if (currentGameState.status !== 'PLAYING' || !currentGameState.options) return;
+
+            const targetVal = currentGameState.correctAnswer;
+            const targetOpt = currentGameState.options.find(o => o.val === targetVal);
+            if (!targetOpt) return;
+
+            Object.keys(playersData).forEach(pId => {
+                const p = playersData[pId];
+                // Distance formula in percentage space
+                const dist = Math.hypot(p.x - targetOpt.x, p.y - targetOpt.y);
+
+                if (dist < 6) { // Touched the correct target!
+                    let newScore = (p.score || 0) + 1;
+                    db.ref('players/' + pId + '/score').set(newScore);
+
+                    let nextRound = (currentGameState.currentRound || 1) + 1;
+                    if (nextRound > 5) {
+                        db.ref('gameState').update({ status: 'FINISHED' });
+                    } else {
+                        generateNextQuestion(nextRound);
+                    }
+                }
+            });
+        }
+
+        function generateNextQuestion(roundNum) {
+            const ops = ['+', '-', '*', '/'];
+            const op = ops[Math.floor(Math.random() * ops.length)];
+            let n1, n2, ans, qText;
+
+            if (op === '+') {
+                n1 = Math.floor(Math.random() * 10);
+                n2 = Math.floor(Math.random() * 10);
+                ans = n1 + n2;
+                qText = `${n1} + ${n2} = ?`;
+            } else if (op === '-') {
+                n1 = Math.floor(Math.random() * 10);
+                n2 = Math.floor(Math.random() * (n1 + 1)); // ห้ามติดลบ
+                ans = n1 - n2;
+                qText = `${n1} - ${n2} = ?`;
+            } else if (op === '*') {
+                n1 = Math.floor(Math.random() * 10);
+                n2 = Math.floor(Math.random() * 10);
+                ans = n1 * n2;
+                qText = `${n1} × ${n2} = ?`;
+            } else { // Division (หารลงตัว)
+                n2 = Math.floor(Math.random() * 9) + 1; // ตัวหาร 1-9
+                ans = Math.floor(Math.random() * 10);   // ผลลัพธ์ 0-9
+                n1 = n2 * ans;                          // ตัวตั้ง
+                qText = `${n1} ÷ ${n2} = ?`;
+            }
+
+            // Generate 5 random position choices
+            let choices = [ans];
+            while (choices.length < 5) {
+                let wrong = Math.floor(Math.random() * 20);
+                if (!choices.includes(wrong)) choices.push(wrong);
+            }
+            choices.sort(() => Math.random() - 0.5);
+
+            // Fixed grid areas to avoid overlap
+            const positions = [
+                { x: 20, y: 20 }, { x: 80, y: 20 },
+                { x: 50, y: 50 },
+                { x: 20, y: 80 }, { x: 80, y: 80 }
+            ].sort(() => Math.random() - 0.5);
+
+            const optionsData = choices.map((val, idx) => ({
+                val: val,
+                x: positions[idx].x,
+                y: positions[idx].y
+            }));
+
+            db.ref('gameState').set({
+                status: 'PLAYING',
+                currentRound: roundNum,
+                question: qText,
+                correctAnswer: ans,
+                options: optionsData
+            });
+        }
+
+        function startGame() {
+            // Reset scores
+            Object.keys(playersData).forEach(pId => {
+                db.ref('players/' + pId + '/score').set(0);
+            });
+            generateNextQuestion(1);
+        }
+
         function resetGame() {
-            if (confirm("ต้องการลบผู้เล่นทั้งหมดออกจากสนามใช่หรือไม่?")) {
+            if (confirm("ต้องการรีเซ็ตเกมและลบผู้เล่นทั้งหมดใช่หรือไม่?")) {
                 db.ref('players').set({});
+                db.ref('gameState').set({ status: 'WAITING' });
             }
         }
     </script>
