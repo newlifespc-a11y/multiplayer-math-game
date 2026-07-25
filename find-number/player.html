@@ -13,49 +13,74 @@
         body {
             -webkit-touch-callout: none;
             -webkit-user-select: none;
-            -khtml-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
             user-select: none;
             touch-action: manipulation;
         }
+        .mini-track {
+            background: repeating-linear-gradient(90deg, #1e293b, #1e293b 15px, #334155 15px, #334155 30px);
+        }
+        .finish-flag {
+            background: repeating-linear-gradient(45deg, #000, #000 5px, #fff 5px, #fff 10px);
+        }
     </style>
 </head>
-<body class="bg-slate-900 text-white min-h-screen flex flex-col justify-center items-center p-4">
+<body class="bg-slate-900 text-white min-h-screen flex flex-col justify-between p-4">
 
     <!-- Screen 1: Join Game -->
-    <div id="login-screen" class="w-full max-w-sm bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl text-center">
-        <h1 class="text-2xl font-bold text-yellow-400 mb-2">🏃 Math Runner</h1>
-        <p class="text-sm text-slate-400 mb-6">กรอกชื่อของคุณเพื่อลงสนามแข่ง</p>
+    <div id="login-screen" class="my-auto w-full max-w-sm mx-auto bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl text-center">
+        <h1 class="text-3xl font-black text-yellow-400 mb-2">🐾 Math Runner</h1>
+        <p class="text-sm text-slate-400 mb-6">เลือกชื่อและสัตว์คู่ใจเพื่อลงสนามประลอง!</p>
         
         <input type="text" id="player-name" placeholder="ใส่ชื่อของคุณที่นี่..." 
                class="w-full p-3 rounded-xl bg-slate-900 border border-slate-600 text-center text-white mb-4 focus:outline-none focus:border-yellow-400 text-lg font-bold">
         
-        <button onclick="joinGame()" class="w-full bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 text-slate-900 font-bold py-3 rounded-xl shadow-lg transition text-lg">
-            เข้าสู่ห้องรอแข่ง
+        <button onclick="joinGame()" class="w-full bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-900 font-bold py-3 rounded-xl shadow-lg transition text-lg">
+            เข้าสู่ลานประลอง
         </button>
     </div>
 
     <!-- Screen 2: Waiting Room -->
-    <div id="wait-screen" class="hidden w-full max-w-sm bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl text-center">
-        <div class="animate-bounce text-5xl mb-4">⏳</div>
-        <h2 class="text-xl font-bold text-slate-200 mb-2">ยินดีต้อนรับ! <span id="display-name" class="text-yellow-400"></span></h2>
+    <div id="wait-screen" class="hidden my-auto w-full max-w-sm mx-auto bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl text-center">
+        <div id="avatar-preview" class="text-6xl mb-4 animate-bounce">🐶</div>
+        <h2 class="text-xl font-bold text-slate-200 mb-2">เตรียมพร้อม! <span id="display-name" class="text-yellow-400"></span></h2>
         <p class="text-sm text-slate-400">มองไปที่หน้าจอหลัก... รอโฮสต์กดเริ่มเกมสักครู่นะครับ</p>
     </div>
 
-    <!-- Screen 3: Game Controller -->
-    <div id="game-screen" class="hidden w-full max-w-sm flex flex-col items-center">
-        <div class="w-full bg-slate-800 p-4 rounded-xl border border-slate-700 mb-4 text-center shadow">
-            <div class="text-xs text-slate-400 mb-1">โจทย์คณิตคิดเร็ว</div>
+    <!-- Screen 3: Game Controller & Mini Field View -->
+    <div id="game-screen" class="hidden w-full max-w-sm mx-auto flex flex-col justify-between h-full flex-1 gap-3">
+        
+        <!-- 1. คะแนนอยู่ด้านบนสุด -->
+        <div class="bg-slate-800 p-3 rounded-xl border border-slate-700 text-center shadow flex justify-between items-center px-4">
+            <span class="text-xs text-slate-400 font-bold uppercase tracking-wider">คะแนนของคุณ</span>
+            <div class="text-2xl font-black text-yellow-400" id="my-score">0</div>
+        </div>
+
+        <!-- 2. โจทย์ขึ้นด้านบน -->
+        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 text-center shadow">
+            <div class="text-xs text-slate-400 mb-1 font-semibold">โจทย์คณิตคิดเร็ว</div>
             <div id="question" class="text-4xl font-black tracking-wider text-cyan-400">? + ?</div>
         </div>
 
-        <div id="options-container" class="grid grid-cols-2 gap-3 w-full">
-            <!-- Dynamic Choice Buttons -->
+        <!-- 3. หน้าต่างผู้เล่นจำลองเหมือนในสนาม (Mini Track View) -->
+        <div class="bg-slate-800 p-3 rounded-xl border border-slate-700 flex flex-col gap-1">
+            <div class="text-xs text-slate-400 flex justify-between font-bold">
+                <span>🏁 ตำแหน่งในสนามของคุณ</span>
+                <span id="player-animal-tag">🐶</span>
+            </div>
+            <div class="w-full h-14 mini-track rounded-lg relative flex items-center px-2 border border-slate-600 overflow-hidden">
+                <div class="finish-flag absolute top-0 bottom-0 right-2 w-3 opacity-80"></div>
+                <div id="mini-avatar-container" class="absolute transition-all duration-300 ease-out flex items-center" style="left: 0%">
+                    <span id="mini-avatar" class="text-3xl filter drop-shadow">🐶</span>
+                </div>
+            </div>
         </div>
 
-        <div class="mt-6 text-slate-400 text-sm font-semibold">
-            คะแนนปัจจุบันของคุณ: <span id="my-score" class="text-yellow-400 font-bold text-lg">0</span>
+        <!-- 4. ปุ่มเคลื่อนจุดไปหาคำตอบ -->
+        <div class="flex-1 flex flex-col justify-end mb-2">
+            <div class="text-xs text-center text-slate-400 mb-2 font-semibold">กดปุ่มคำตอบที่ถูกต้องเพื่อเลื่อนจุดเดินหน้า!</div>
+            <div id="options-container" class="grid grid-cols-2 gap-3 w-full">
+                <!-- Dynamic Choice Buttons -->
+            </div>
         </div>
     </div>
 
@@ -67,6 +92,9 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+
+        const animals = ['🐶', '🐱', '🦊', '🐰', '🦁', '🐯', '🐼', '🐸', '🐵', '🦄', '🐨', '🐷'];
+        let selectedAnimal = '🐶';
 
         let playerId = null;
         let currentScore = 0;
@@ -80,25 +108,28 @@
                 return;
             }
 
-            // Create unique Player ID
+            // สุ่มสัตว์ประจำตัวผู้เล่น
+            selectedAnimal = animals[Math.floor(Math.random() * animals.length)];
+
             playerId = 'player_' + Math.random().toString(36).substr(2, 9);
-            
             const playerRef = db.ref('players/' + playerId);
 
-            // Save to Firebase
             playerRef.set({
                 name: nameInput,
+                animal: selectedAnimal,
                 score: 0
             });
 
-            // ลบชื่อออกจากฐานข้อมูลอัตโนมัติเมื่อผู้เล่นปิดหน้าจอ/เบราว์เซอร์
             playerRef.onDisconnect().remove();
 
             document.getElementById('display-name').innerText = nameInput;
+            document.getElementById('avatar-preview').innerText = selectedAnimal;
+            document.getElementById('mini-avatar').innerText = selectedAnimal;
+            document.getElementById('player-animal-tag').innerText = selectedAnimal;
+
             document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('wait-screen').classList.remove('hidden');
 
-            // Listen for Game Start
             listenToGameState();
         }
 
@@ -108,14 +139,24 @@
                 if (status === 'PLAYING') {
                     document.getElementById('wait-screen').classList.add('hidden');
                     document.getElementById('game-screen').classList.remove('hidden');
+                    document.getElementById('game-screen').classList.add('flex');
                     generateQuestion();
                 } else if (status === 'WAITING') {
                     currentScore = 0;
-                    document.getElementById('my-score').innerText = '0';
+                    updateScoreAndPosition(0);
                     document.getElementById('game-screen').classList.add('hidden');
+                    document.getElementById('game-screen').classList.remove('flex');
                     document.getElementById('wait-screen').classList.remove('hidden');
                 }
             });
+        }
+
+        function updateScoreAndPosition(newScore) {
+            currentScore = newScore;
+            document.getElementById('my-score').innerText = currentScore;
+            // คำนวณตำแหน่งจุดใน Mini Map (สูงสุด 10 คะแนน = 80% ของความกว้าง)
+            const posPercent = Math.min((currentScore / 10) * 80, 80);
+            document.getElementById('mini-avatar-container').style.left = posPercent + '%';
         }
 
         function generateQuestion() {
@@ -126,41 +167,37 @@
 
             document.getElementById('question').innerText = `${num1} + ${num2} = ?`;
 
-            // Generate Choices
             let choices = [currentAnswer];
             while (choices.length < 4) {
                 let wrong = Math.floor(Math.random() * 20) + 1;
                 if (!choices.includes(wrong)) choices.push(wrong);
             }
-            // Shuffle Choices
             choices.sort(() => Math.random() - 0.5);
 
             const container = document.getElementById('options-container');
             container.innerHTML = choices.map(choice => `
                 <button onclick="checkAnswer(${choice}, this)" 
-                        class="bg-slate-800 hover:bg-slate-700 border-2 border-slate-600 active:bg-yellow-500 active:text-slate-900 text-3xl font-bold py-5 rounded-xl shadow transition transform active:scale-95">
+                        class="bg-slate-800 hover:bg-slate-700 border-2 border-slate-600 active:bg-yellow-500 active:text-slate-900 text-3xl font-bold py-4 rounded-xl shadow transition transform active:scale-95">
                     ${choice}
                 </button>
             `).join('');
         }
 
         function checkAnswer(selected, btnElement) {
-            if (isProcessing) return; // ป้องกันการกดรัวซ้ำ
+            if (isProcessing) return;
 
             if (selected === currentAnswer) {
                 isProcessing = true;
                 btnElement.classList.remove('bg-slate-800', 'border-slate-600');
                 btnElement.classList.add('bg-emerald-500', 'border-emerald-400', 'text-white');
 
-                currentScore += 1;
-                document.getElementById('my-score').innerText = currentScore;
+                updateScoreAndPosition(currentScore + 1);
                 db.ref('players/' + playerId + '/score').set(currentScore);
 
                 setTimeout(() => {
                     generateQuestion();
                 }, 150);
             } else {
-                // Flash Red on wrong answer
                 document.body.classList.add('bg-rose-900');
                 btnElement.classList.add('border-rose-500', 'bg-rose-800/50');
                 setTimeout(() => {
