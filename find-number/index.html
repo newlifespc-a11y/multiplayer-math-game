@@ -3,65 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Math Runner - Bright Cute Lawn</title>
+    <title>Math Runner - Host Display</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        /* สร้างฉากสนามหญ้าการ์ตูนด้วย CSS สดใส น่ารัก ไม่ต้องพึ่งรูปภายนอก */
-        .pure-grass-map {
-            background: linear-gradient(to bottom, #7dd3fc 0%, #bae6fd 60%, #86efac 60%, #4ade80 100%);
+        /* ดึงรูปภาพ Gemini_Generated_Image.png ที่อัปโหลดในโฟลเดอร์เดียวกันมาใช้เป็น Background */
+        .custom-game-bg {
+            background-image: url('./Gemini_Generated_Image.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
             position: relative;
-            overflow: hidden;
         }
 
-        /* เนินหญ้าการ์ตูนยิ้มแย้ม */
-        .hill-1 {
-            position: absolute;
-            bottom: -50px;
-            left: -10%;
-            width: 70%;
-            height: 200px;
-            background: #22c55e;
-            border-radius: 50%;
-        }
-        .hill-2 {
-            position: absolute;
-            bottom: -70px;
-            right: -10%;
-            width: 70%;
-            height: 220px;
-            background: #16a34a;
-            border-radius: 50%;
-        }
-
-        /* เมฆการ์ตูนดุ๊กดิ๊ก */
-        .cloud {
-            position: absolute;
-            background: #ffffff;
-            border-radius: 50px;
-            opacity: 0.9;
-        }
-        .cloud::before, .cloud::after {
-            content: '';
-            position: absolute;
-            background: #ffffff;
-            border-radius: 50%;
-        }
-        .cloud-1 { width: 120px; height: 40px; top: 15%; left: 10%; }
-        .cloud-1::before { width: 50px; height: 50px; top: -20px; left: 20px; }
-        .cloud-1::after { width: 40px; height: 40px; top: -15px; left: 55px; }
-
-        .cloud-2 { width: 100px; height: 35px; top: 25%; right: 15%; }
-        .cloud-2::before { width: 40px; height: 40px; top: -15px; left: 15px; }
-        .cloud-2::after { width: 35px; height: 35px; top: -10px; left: 45px; }
-
-        /* ป้ายตัวเลขการ์ตูนลอยนุ่มนวล */
+        /* ป้ายตัวเลขคำตอบทรงการ์ตูนป๊อปอัพ เด่นชัด */
         .cute-target {
             background: linear-gradient(180deg, #fef08a 0%, #facc15 100%);
             border: 4px solid #ffffff;
-            box-shadow: 0 6px 0px #ca8a04, 0 10px 15px rgba(0,0,0,0.15);
+            box-shadow: 0 6px 0px #ca8a04, 0 10px 15px rgba(0,0,0,0.25);
             animation: bounce-gentle 1.2s infinite alternate ease-in-out;
         }
 
@@ -71,21 +32,21 @@
         }
     </style>
 </head>
-<body class="bg-emerald-50 text-slate-800 h-screen flex flex-col font-sans select-none overflow-hidden">
+<body class="bg-amber-50 text-slate-800 h-screen flex flex-col font-sans select-none overflow-hidden">
 
     <!-- Header Section -->
-    <header class="px-6 py-3 bg-white/90 border-b-4 border-emerald-300 flex justify-between items-center shadow-md z-30">
+    <header class="px-6 py-3 bg-white/90 border-b-4 border-amber-300 flex justify-between items-center shadow-md z-30">
         <div class="flex items-center gap-3">
-            <span class="text-4xl">🌱</span>
+            <span class="text-4xl">🎮</span>
             <div>
-                <h1 class="text-2xl font-black text-emerald-700 tracking-wide">
-                    MATH RUNNER: วิ่งผจญภัยหารายได้
+                <h1 class="text-2xl font-black text-amber-800 tracking-wide">
+                    MATH RUNNER: วิ่งผจญภัยหาคำตอบ
                 </h1>
-                <p class="text-xs font-bold text-slate-500">บังคับตัวละครวิ่งไปชนคำตอบที่ถูกต้องบนสนามหญ้า!</p>
+                <p class="text-xs font-bold text-slate-500">บังคับตัวละครวิ่งไปชนคำตอบที่ถูกต้อง!</p>
             </div>
         </div>
         <div class="flex items-center gap-3">
-            <button onclick="startGame()" class="bg-gradient-to-b from-emerald-400 to-green-500 hover:from-emerald-300 hover:to-green-400 text-white border-b-4 border-green-700 active:border-b-0 px-6 py-2 rounded-2xl font-black shadow-lg transition transform hover:scale-105 active:scale-95 text-base flex items-center gap-2">
+            <button onclick="startGame()" class="bg-gradient-to-b from-amber-400 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-white border-b-4 border-yellow-700 active:border-b-0 px-6 py-2 rounded-2xl font-black shadow-lg transition transform hover:scale-105 active:scale-95 text-base flex items-center gap-2">
                 <span>▶</span> เริ่มเกม
             </button>
             <button onclick="resetGame()" class="bg-gradient-to-b from-rose-400 to-red-500 hover:from-rose-300 hover:to-red-400 text-white border-b-4 border-red-700 active:border-b-0 px-4 py-2 rounded-2xl font-black shadow-lg transition text-base flex items-center gap-1">
@@ -97,33 +58,27 @@
     <div class="flex-1 flex p-4 gap-4 overflow-hidden relative">
         
         <!-- Sidebar Scoreboard + QR Code -->
-        <div class="w-64 bg-white/95 backdrop-blur-md p-4 rounded-3xl border-4 border-emerald-200 flex flex-col items-center shadow-xl z-20">
+        <div class="w-64 bg-white/95 backdrop-blur-md p-4 rounded-3xl border-4 border-amber-200 flex flex-col items-center shadow-xl z-20">
             
             <!-- QR Code Section -->
-            <div class="bg-emerald-50 p-3 rounded-2xl border-2 border-emerald-200 shadow-inner flex flex-col items-center mb-3 w-full">
+            <div class="bg-amber-50 p-3 rounded-2xl border-2 border-amber-200 shadow-inner flex flex-col items-center mb-3 w-full">
                 <div id="qrcode" class="bg-white p-2 rounded-xl shadow-md border border-slate-200"></div>
-                <span class="text-xs font-black text-emerald-800 mt-2 uppercase tracking-wider text-center">📱 สแกน QR Code เข้าเล่น</span>
+                <span class="text-xs font-black text-amber-800 mt-2 uppercase tracking-wider text-center">📱 สแกน QR Code เข้าเล่น</span>
             </div>
 
             <!-- Scoreboard Section -->
-            <h3 class="font-black text-emerald-800 border-b-2 border-emerald-100 pb-2 mb-2 flex justify-between items-center text-sm w-full">
+            <h3 class="font-black text-amber-800 border-b-2 border-amber-100 pb-2 mb-2 flex justify-between items-center text-sm w-full">
                 <span>🏆 อันดับคะแนน</span>
-                <span id="player-count" class="bg-emerald-200 text-emerald-900 text-xs px-2.5 py-0.5 rounded-full font-bold">0 คน</span>
+                <span id="player-count" class="bg-amber-200 text-amber-900 text-xs px-2.5 py-0.5 rounded-full font-bold">0 คน</span>
             </h3>
             <ul id="player-join-list" class="w-full flex-1 overflow-y-auto space-y-2 text-xs">
-                <li class="text-slate-400 text-center italic py-4 font-bold">รอเด็กๆ สแกน QR Code...</li>
+                <li class="text-slate-400 text-center italic py-4 font-bold">รอเด็กๆ สแกน...</li>
             </ul>
         </div>
 
-        <!-- Main Display Map View (Pure CSS Grass Scene) -->
-        <div class="flex-1 pure-grass-map rounded-3xl border-4 border-white shadow-2xl relative flex flex-col justify-start items-center overflow-hidden p-4">
+        <!-- Main Display Map View -->
+        <div class="flex-1 custom-game-bg rounded-3xl border-4 border-white shadow-2xl relative flex flex-col justify-start items-center overflow-hidden p-4">
             
-            <!-- Background Decorative Hills & Clouds -->
-            <div class="cloud cloud-1"></div>
-            <div class="cloud cloud-2"></div>
-            <div class="hill-1"></div>
-            <div class="hill-2"></div>
-
             <!-- Top Floating Question Box -->
             <div class="bg-white/95 border-4 border-amber-300 rounded-3xl px-8 py-3 text-center shadow-xl z-20 flex items-center gap-6 mt-2">
                 <span id="round-label" class="text-xs font-black bg-amber-400 text-white px-3 py-1 rounded-full uppercase tracking-wider shadow border border-amber-500">
@@ -154,10 +109,11 @@
         let currentGameState = {};
         let isProcessingHit = false;
 
-        const roadPathPoints = [
-            { x: 15, y: 35 }, { x: 35, y: 30 }, { x: 65, y: 32 }, { x: 85, y: 38 },
-            { x: 80, y: 65 }, { x: 60, y: 60 }, { x: 38, y: 62 }, { x: 20, y: 58 },
-            { x: 18, y: 80 }, { x: 35, y: 85 }, { x: 65, y: 85 }, { x: 82, y: 80 }
+        // จุดพิกัดกระจายป้ายคำตอบบนแผนที่
+        const mapPoints = [
+            { x: 20, y: 35 }, { x: 40, y: 30 }, { x: 60, y: 32 }, { x: 80, y: 38 },
+            { x: 75, y: 65 }, { x: 55, y: 60 }, { x: 35, y: 62 }, { x: 20, y: 58 },
+            { x: 25, y: 80 }, { x: 45, y: 85 }, { x: 65, y: 85 }, { x: 80, y: 80 }
         ];
 
         const playerUrl = "https://newlifespc-a11y.github.io/multiplayer-math-game/find-number/player.html";
@@ -207,7 +163,7 @@
 
             listEl.innerHTML = sortedKeys.map((id, idx) => {
                 const p = playersData[id];
-                return `<li class="flex items-center justify-between bg-emerald-50 p-2 rounded-2xl border border-emerald-200 shadow-sm">
+                return `<li class="flex items-center justify-between bg-amber-50 p-2 rounded-2xl border border-amber-200 shadow-sm">
                     <span class="font-bold flex items-center gap-2 text-slate-700">
                         <span class="text-[10px] bg-amber-400 text-white font-black px-2 py-0.5 rounded-full border border-amber-500">#${idx+1}</span>
                         <span class="text-xl">${p.avatar || '🐯'}</span>
@@ -229,16 +185,16 @@
 
             container.innerHTML = keys.map((id) => {
                 const p = playersData[id];
-                const x = p.x !== undefined ? p.x : 15;
+                const x = p.x !== undefined ? p.x : 20;
                 const y = p.y !== undefined ? p.y : 35;
 
                 return `
                 <div class="absolute transition-all duration-75 ease-out flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2 z-20" 
                      style="left: ${x}%; top: ${y}%;">
-                    <div class="text-4xl filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.25)]">
+                    <div class="text-4xl filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.3)]">
                         ${p.avatar || '🐯'}
                     </div>
-                    <span class="text-[10px] font-black bg-white/95 text-emerald-900 px-2.5 py-0.5 rounded-full border-2 border-emerald-400 shadow-md whitespace-nowrap">
+                    <span class="text-[10px] font-black bg-white/95 text-amber-900 px-2.5 py-0.5 rounded-full border-2 border-amber-400 shadow-md whitespace-nowrap">
                         ${p.name || 'ผู้เล่น'}
                     </span>
                 </div>`;
@@ -328,12 +284,12 @@
             }
             choices.sort(() => Math.random() - 0.5);
 
-            const shuffledRoadPoints = [...roadPathPoints].sort(() => Math.random() - 0.5);
+            const shuffledPoints = [...mapPoints].sort(() => Math.random() - 0.5);
 
             const optionsData = choices.map((val, idx) => ({
                 val: val,
-                x: shuffledRoadPoints[idx].x,
-                y: shuffledRoadPoints[idx].y
+                x: shuffledPoints[idx].x,
+                y: shuffledPoints[idx].y
             }));
 
             db.ref('gameState').set({
