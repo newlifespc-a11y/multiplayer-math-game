@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Math Runner - Mobile Controller</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase SDK (v8) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex flex-col justify-center items-center p-4 select-none">
+
+    <!-- Screen 1: Join Game -->
+    <div id="login-screen" class="w-full max-w-sm bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl text-center">
+        <h1 class="text-2xl font-bold text-yellow-400 mb-2">🏃 Math Runner</h1>
+        <p class="text-sm text-slate-400 mb-6">กรอกชื่อของคุณเพื่อลงสนามแข่ง</p>
+        
+        <input type="text" id="player-name" placeholder="ใส่ชื่อของคุณที่นี่..." 
+               class="w-full p-3 rounded-xl bg-slate-900 border border-slate-600 text-center text-white mb-4 focus:outline-none focus:border-yellow-400">
+        
+        <button onclick="joinGame()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-slate-900 font-bold py-3 rounded-xl shadow-lg transition">
+            เข้าสู่ห้องรอแข่ง
+        </button>
+    </div>
+
+    <!-- Screen 2: Waiting Room -->
+    <div id="wait-screen" class="hidden w-full max-w-sm bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl text-center">
+        <div class="animate-bounce text-4xl mb-4">⏳</div>
+        <h2 class="text-xl font-bold text-slate-200 mb-2">ยินดีต้อนรับ! <span id="display-name" class="text-yellow-400"></span></h2>
+        <p class="text-sm text-slate-400">มองไปที่หน้าจอหลัก... รอโฮสต์กดเริ่มเกมสักครู่นะครับ</p>
+    </div>
+
+    <!-- Screen 3: Game Controller -->
+    <div id="game-screen" class="hidden w-full max-w-sm flex flex-col items-center">
+        <div class="w-full bg-slate-800 p-4 rounded-xl border border-slate-700 mb-4 text-center shadow">
+            <div class="text-xs text-slate-400 mb-1">โจทย์คณิตคิดเร็ว</div>
+            <div id="question" class="text-3xl font-black tracking-wider text-cyan-400">? + ?</div>
+        </div>
+
+        <div id="options-container" class="grid grid-cols-2 gap-3 w-full">
+            <!-- Dynamic Choice Buttons -->
+        </div>
+
+        <div class="mt-6 text-slate-400 text-xs">
+            คะแนนปัจจุบันของคุณ: <span id="my-score" class="text-yellow-400 font-bold text-sm">0</span>
+        </div>
+    </div>
+
+    <!-- Firebase Script & App Logic -->
+    <script>
+        const firebaseConfig = {
+            databaseURL: "https://multiplayer-math-game-e021c-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "multiplayer-math-game-e021c"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let playerId = null;
+        let currentScore = 0;
+        let currentAnswer = 0;
+
+        function joinGame() {
+            const nameInput = document.getElementById('player-name').value.trim();
+            if (!nameInput) {
+                alert('กรุณากรอกชื่อก่อนเริ่มเล่นครับ');
+                return;
+            }
+
+            // Create unique Player ID
+            playerId = 'player_' + Math.random().toString(36).substr(2, 9);
+            
+            // Save to Firebase
+            db.ref('players/' + playerId).set({
+                name: nameInput,
+                score: 0
+            });
+
+            document.getElementById('display-name').innerText = nameInput;
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('wait-screen').classList.remove('hidden');
+
+            // Listen for Game Start
+            listenToGameState();
+        }
+
+        function listenToGameState() {
+            db.ref('gameState/status').on('value', (snapshot) => {
+                const status = snapshot.val();
+                if (status === 'PLAYING') {
+                    document.getElementById('wait-screen').classList.add('hidden');
+                    document.getElementById('game-screen').classList.remove('hidden');
+                    generateQuestion();
+                } else if (status === 'WAITING') {
+                    currentScore = 0;
+                    document.getElementById('my-score').innerText = '0';
+                    document.getElementById('game-screen').classList.add('hidden');
+                    document.getElementById('wait-screen').classList.remove('hidden');
+                }
+            });
+        }
+
+        function generateQuestion() {
+            const num1 = Math.floor(Math.random() * 10) + 1;
+            const num2 = Math.floor(Math.random() * 10) + 1;
+            currentAnswer = num1 + num2;
+
+            document.getElementById('question').innerText = `${num1} + ${num2} = ?`;
+
+            // Generate Choices
+            let choices = [currentAnswer];
+            while (choices.length < 4) {
+                let wrong = Math.floor(Math.random() * 20) + 1;
+                if (!choices.includes(wrong)) choices.push(wrong);
+            }
+            // Shuffle Choices
+            choices.sort(() => Math.random() - 0.5);
+
+            const container = document.getElementById('options-container');
+            container.innerHTML = choices.map(choice => `
+                <button onclick="checkAnswer(${choice})" 
+                        class="bg-slate-800 hover:bg-slate-700 border-2 border-slate-600 active:bg-yellow-500 active:text-slate-900 text-2xl font-bold py-4 rounded-xl shadow transition">
+                    ${choice}
+                </button>
+            `).join('');
+        }
+
+        function checkAnswer(selected) {
+            if (selected === currentAnswer) {
+                currentScore += 1;
+                document.getElementById('my-score').innerText = currentScore;
+                db.ref('players/' + playerId + '/score').set(currentScore);
+                generateQuestion();
+            } else {
+                // Flash Red on wrong answer
+                document.body.classList.add('bg-rose-900');
+                setTimeout(() => document.body.classList.remove('bg-rose-900'), 200);
+            }
+        }
+    </script>
+</body>
+</html>
