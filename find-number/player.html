@@ -15,11 +15,10 @@
             touch-action: manipulation;
             overflow: hidden;
         }
-        /* Style สำหรับ วงกลม Joystick ขวาล่าง */
         #joystick-base {
             width: 120px;
             height: 120px;
-            background: rgba(15, 23, 42, 0.65);
+            background: rgba(15, 23, 42, 0.7);
             border: 3px solid #38bdf8;
             border-radius: 50%;
             position: relative;
@@ -44,23 +43,24 @@
 
     <!-- Header Section -->
     <header class="p-3 bg-slate-800 flex justify-between items-center border-b border-slate-700">
-        <h1 class="text-xs font-bold text-yellow-400">🏃 ลานประลองความเร็ว</h1>
-        <span id="player-name-tag" class="text-[11px] bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full font-semibold">
-            กำลังสร้างตัวละคร...
+        <h1 id="mobile-question" class="text-sm font-bold text-yellow-400">🏃 รอโฮสต์กดเริ่มเกม...</h1>
+        <span id="player-score-tag" class="text-xs bg-yellow-500 text-slate-900 px-2 py-0.5 rounded-full font-bold">
+            คะแนน: 0
         </span>
     </header>
 
     <!-- Main View: Solid Light Blue Arena -->
     <div class="flex-1 p-3 flex flex-col relative overflow-hidden">
         
-        <!-- Light Blue Arena Container (ไร้จุด) -->
+        <!-- Light Blue Area (ไร้จุด) -->
         <div class="flex-1 bg-sky-200 rounded-xl relative border-2 border-sky-400 overflow-hidden shadow-inner">
-            <div id="players-layer" class="w-full h-full relative">
-                <!-- Dynamic Players Render Here -->
-            </div>
+            <!-- Options Layer -->
+            <div id="options-layer" class="w-full h-full absolute inset-0"></div>
+            <!-- Players Layer -->
+            <div id="players-layer" class="w-full h-full absolute inset-0"></div>
         </div>
 
-        <!-- Floating Circular Joystick at Bottom Right (วงกลมขวาล่าง) -->
+        <!-- Floating Circular Joystick at Bottom Right -->
         <div class="absolute bottom-6 right-6 z-50 flex flex-col items-center">
             <div id="joystick-base" class="shadow-2xl">
                 <div id="joystick-stick"></div>
@@ -68,7 +68,6 @@
         </div>
     </div>
 
-    <!-- Firebase & Joystick Logic -->
     <script>
         const firebaseConfig = {
             databaseURL: "https://multiplayer-math-game-e021c-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -82,12 +81,11 @@
         let posX = Math.floor(Math.random() * 60) + 20; 
         let posY = Math.floor(Math.random() * 60) + 20; 
         let allPlayers = {};
+        let currentGameState = {};
         
-        // รายการรูปการ์ตูนสำหรับใช้เป็นตัวละคร
         const avatars = ['🐯', '🦁', '🦊', '🐰', '🐼', '🐸', '🦄', '🐵', '🐱', '🐶', '🐥', '🐨'];
         let myAvatar = avatars[Math.floor(Math.random() * avatars.length)];
 
-        // Auto Join when Scanning
         function autoCreatePlayer() {
             playerId = 'player_' + Math.random().toString(36).substr(2, 9);
             const playerRef = db.ref('players/' + playerId);
@@ -95,43 +93,73 @@
             playerRef.set({
                 name: myName,
                 avatar: myAvatar,
+                score: 0,
                 x: posX,
                 y: posY
             });
 
             playerRef.onDisconnect().remove();
 
-            document.getElementById('player-name-tag').innerText = "คุณคือ: " + myAvatar + " " + myName;
-
-            // Listen for All Players Realtime Position
+            // Realtime Sync
             db.ref('players').on('value', (snapshot) => {
                 allPlayers = snapshot.val() || {};
-                renderArena();
+                renderPlayers();
+                if (playerId && allPlayers[playerId]) {
+                    document.getElementById('player-score-tag').innerText = "คะแนน: " + (allPlayers[playerId].score || 0);
+                }
+            });
+
+            db.ref('gameState').on('value', (snapshot) => {
+                currentGameState = snapshot.val() || {};
+                renderOptions();
+                
+                const qEl = document.getElementById('mobile-question');
+                if (currentGameState.status === 'PLAYING') {
+                    qEl.innerText = `โจทย์ (${currentGameState.currentRound}/5): ${currentGameState.question}`;
+                } else if (currentGameState.status === 'FINISHED') {
+                    qEl.innerText = "🏆 จบเกมแล้ว!";
+                } else {
+                    qEl.innerText = "🏃 รอโฮสต์กดเริ่มเกม...";
+                }
             });
         }
 
-        function renderArena() {
+        function renderPlayers() {
             const container = document.getElementById('players-layer');
             const keys = Object.keys(allPlayers);
 
             container.innerHTML = keys.map((id) => {
                 const p = allPlayers[id];
-                const avatar = p.avatar || '🐯';
                 const x = p.x !== undefined ? p.x : 50;
                 const y = p.y !== undefined ? p.y : 50;
                 const isMe = id === playerId;
 
                 return `
-                <div class="absolute transition-all duration-75 ease-out flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2" 
+                <div class="absolute transition-all duration-75 ease-out flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2 z-20" 
                      style="left: ${x}%; top: ${y}%;">
                     <div class="text-2xl filter drop-shadow ${isMe ? 'scale-125 ring-2 ring-yellow-400 rounded-full bg-yellow-300/40 p-0.5' : ''}">
-                        ${avatar}
+                        ${p.avatar || '🐯'}
                     </div>
                     <span class="text-[8px] font-normal ${isMe ? 'bg-yellow-400 text-slate-900 font-bold' : 'bg-slate-900/80 text-white'} px-1 rounded whitespace-nowrap">
                         ${p.name}
                     </span>
                 </div>`;
             }).join('');
+        }
+
+        function renderOptions() {
+            const container = document.getElementById('options-layer');
+            if (currentGameState.status !== 'PLAYING' || !currentGameState.options) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = currentGameState.options.map((opt) => `
+                <div class="absolute transform -translate-x-1/2 -translate-y-1/2 bg-white/90 border-2 border-sky-600 text-slate-900 font-black text-base rounded-xl w-10 h-10 flex items-center justify-center shadow z-10"
+                     style="left: ${opt.x}%; top: ${opt.y}%;">
+                    ${opt.val}
+                </div>
+            `).join('');
         }
 
         // --- Circular Joystick Logic ---
@@ -141,27 +169,19 @@
         let moveInterval = null;
         let deltaX = 0;
         let deltaY = 0;
-
         const maxRadius = 38; 
 
         function handleStart(e) {
             isDragging = true;
-            if (!moveInterval) {
-                moveInterval = setInterval(updatePosition, 50); 
-            }
+            if (!moveInterval) moveInterval = setInterval(updatePosition, 50); 
         }
 
         function handleMove(e) {
             if (!isDragging) return;
-
             const touch = e.touches ? e.touches[0] : e;
             const rect = base.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-
-            let dx = touch.clientX - centerX;
-            let dy = touch.clientY - centerY;
-
+            let dx = touch.clientX - (rect.left + rect.width / 2);
+            let dy = touch.clientY - (rect.top + rect.height / 2);
             const distance = Math.sqrt(dx * dx + dy * dy);
 
             if (distance > maxRadius) {
@@ -170,7 +190,6 @@
             }
 
             stick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-
             deltaX = (dx / maxRadius) * 1.5;
             deltaY = (dy / maxRadius) * 1.5;
         }
@@ -178,15 +197,13 @@
         function handleEnd() {
             isDragging = false;
             stick.style.transform = `translate(-50%, -50%)`;
-            deltaX = 0;
-            deltaY = 0;
+            deltaX = 0; deltaY = 0;
             clearInterval(moveInterval);
             moveInterval = null;
         }
 
         function updatePosition() {
             if (deltaX === 0 && deltaY === 0) return;
-
             posX = Math.min(Math.max(posX + deltaX, 3), 97);
             posY = Math.min(Math.max(posY + deltaY, 3), 97);
 
@@ -196,16 +213,13 @@
             }
         }
 
-        // Joystick Event Listeners
         base.addEventListener('touchstart', handleStart);
         window.addEventListener('touchmove', handleMove);
         window.addEventListener('touchend', handleEnd);
-
         base.addEventListener('mousedown', handleStart);
         window.addEventListener('mousemove', handleMove);
         window.addEventListener('mouseup', handleEnd);
 
-        // Auto initialization
         autoCreatePlayer();
     </script>
 </body>
