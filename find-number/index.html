@@ -8,13 +8,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <style>
-        .arena-sky {
-            background-color: #bae6fd; /* สีฟ้าอ่อน */
-            background-image: radial-gradient(#0284c7 1.5px, transparent 1.5px);
-            background-size: 24px 24px;
-        }
-    </style>
 </head>
 <body class="bg-slate-900 text-white min-h-screen flex flex-col font-sans select-none">
 
@@ -46,11 +39,11 @@
         <!-- Main Sky Arena View -->
         <div class="flex-1 bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col">
             <div class="flex justify-between items-center mb-2">
-                <h2 class="text-xl font-bold text-slate-200">ลานประลองสีฟ้าอ่อน</h2>
+                <h2 class="text-xl font-bold text-slate-200">ลานประลองความเร็ว</h2>
             </div>
 
-            <!-- Light Blue 2D Arena Canvas Box -->
-            <div id="arena-container" class="flex-1 arena-sky rounded-xl relative border-4 border-sky-400 shadow-inner overflow-hidden min-h-[450px]">
+            <!-- Solid Light Blue Arena Container (ไร้จุด) -->
+            <div id="arena-container" class="flex-1 bg-sky-200 rounded-xl relative border-4 border-sky-400 shadow-inner overflow-hidden min-h-[450px]">
                 <div id="players-layer" class="w-full h-full relative">
                     <!-- Dynamic player avatars render here -->
                 </div>
@@ -67,7 +60,6 @@
         const db = firebase.database();
 
         let playersData = {};
-        const colors = ['#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#10B981'];
 
         // QR Code pointing directly to player.html
         const playerUrl = "https://newlifespc-a11y.github.io/multiplayer-math-game/find-number/player.html";
@@ -95,12 +87,12 @@
                 return;
             }
 
-            listEl.innerHTML = keys.map((id, index) => {
+            listEl.innerHTML = keys.map((id) => {
                 const p = playersData[id];
-                const color = colors[index % colors.length];
+                const avatar = p.avatar || '🐯';
                 return `<li class="flex items-center justify-between bg-slate-700/50 p-2 rounded border border-slate-600">
                     <span class="font-medium flex items-center gap-2">
-                        <span class="w-3 h-3 rounded-full" style="background-color: ${color}"></span>
+                        <span class="text-base">${avatar}</span>
                         ${p.name}
                     </span>
                     <span class="text-xs text-sky-300">x: ${Math.round(p.x)}%, y: ${Math.round(p.y)}%</span>
@@ -113,24 +105,23 @@
             const keys = Object.keys(playersData);
 
             if (keys.length === 0) {
-                container.innerHTML = '<div class="absolute inset-0 flex items-center justify-center text-slate-600 font-bold text-lg">ยังไม่มีผู้เล่นในสนาม (สแกน QR Code เพื่อเข้ามาได้เลย)</div>';
+                container.innerHTML = '<div class="absolute inset-0 flex items-center justify-center text-slate-500 font-bold text-lg">ยังไม่มีผู้เล่นในสนาม (สแกน QR Code เพื่อเข้ามาได้เลย)</div>';
                 return;
             }
 
-            container.innerHTML = keys.map((id, index) => {
+            container.innerHTML = keys.map((id) => {
                 const p = playersData[id];
-                const color = colors[index % colors.length];
+                const avatar = p.avatar || '🐯';
                 const x = p.x !== undefined ? p.x : 50;
                 const y = p.y !== undefined ? p.y : 50;
 
                 return `
                 <div class="absolute transition-all duration-75 ease-out flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2" 
                      style="left: ${x}%; top: ${y}%;">
-                    <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-md border-2 border-white ring-2 ring-sky-600/30" 
-                         style="background-color: ${color}">
-                        🏃
+                    <div class="text-3xl filter drop-shadow-md hover:scale-110 transition">
+                        ${avatar}
                     </div>
-                    <span class="mt-1 text-[11px] font-bold bg-slate-900/80 text-white px-2 py-0.5 rounded shadow border border-slate-700 whitespace-nowrap">
+                    <span class="mt-0.5 text-[9px] font-medium bg-slate-900/80 text-white px-1.5 py-0.2 rounded shadow whitespace-nowrap">
                         ${p.name}
                     </span>
                 </div>`;
