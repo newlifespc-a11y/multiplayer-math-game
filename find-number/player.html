@@ -3,81 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Math Runner - Controller</title>
+    <title>Math Runner - Player Controller</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         body {
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            user-select: none;
             touch-action: manipulation;
-            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
         }
-        .map-bg {
-            background-color: #15803d;
-            background-image: radial-gradient(#166534 2px, transparent 2px);
-            background-size: 20px 20px;
+        /* สไตล์ปุ่มจอยสติ๊กการ์ตูนสดใส */
+        .joystick-base {
+            background: radial-gradient(circle, #fef08a 0%, #fde047 100%);
+            box-shadow: 0 10px 25px rgba(234, 179, 8, 0.4), inset 0 4px 8px rgba(255,255,255,0.8);
         }
-        #joystick-base {
-            width: 120px;
-            height: 120px;
-            background: rgba(15, 23, 42, 0.7);
-            border: 3px solid #38bdf8;
-            border-radius: 50%;
-            position: relative;
-            touch-action: none;
-            backdrop-filter: blur(4px);
-        }
-        #joystick-stick {
-            width: 46px;
-            height: 46px;
-            background: #f59e0b;
-            border: 2px solid #ffffff;
-            border-radius: 50%;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        .joystick-handle {
+            background: radial-gradient(circle, #ff7e5f 0%, #feb47b 100%);
+            box-shadow: 0 8px 15px rgba(239, 68, 68, 0.4), inset 0 2px 5px rgba(255,255,255,0.9);
         }
     </style>
 </head>
-<body class="bg-slate-900 text-white h-screen flex flex-col font-sans">
+<body class="bg-gradient-to-b from-sky-400 via-sky-200 to-emerald-200 h-screen flex flex-col justify-between p-4 font-sans overflow-hidden">
 
-    <!-- Header Section -->
-    <header class="p-3 bg-slate-800 flex justify-between items-center border-b border-slate-700">
-        <h1 id="mobile-question" class="text-sm font-bold text-yellow-400">🏃 รอโฮสต์กดเริ่มเกม...</h1>
-        <span id="player-score-tag" class="text-xs bg-yellow-500 text-slate-900 px-2 py-0.5 rounded-full font-bold">
-            คะแนน: 0
-        </span>
-    </header>
-
-    <!-- Main View -->
-    <div class="flex-1 p-3 flex flex-col relative overflow-hidden">
-        
-        <!-- Road Arena Container -->
-        <div class="flex-1 map-bg rounded-xl relative border-2 border-emerald-600 overflow-hidden shadow-inner">
-            
-            <!-- Road SVG Canvas Line -->
-            <svg class="absolute inset-0 w-full h-full pointer-events-none z-0" xmlns="http://www.w3.org/2000/svg">
-                <path d="M 15% 20% C 35% 10%, 65% 10%, 85% 25% C 95% 40%, 80% 60%, 50% 50% C 20% 40%, 10% 70%, 25% 80% C 45% 90%, 75% 85%, 85% 80%" 
-                      fill="none" stroke="#d97706" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M 15% 20% C 35% 10%, 65% 10%, 85% 25% C 95% 40%, 80% 60%, 50% 50% C 20% 40%, 10% 70%, 25% 80% C 45% 90%, 75% 85%, 85% 80%" 
-                      fill="none" stroke="#fef08a" stroke-width="2" stroke-dasharray="6 6" stroke-linecap="round"/>
-            </svg>
-
-            <!-- Options Layer -->
-            <div id="options-layer" class="w-full h-full absolute inset-0 z-10"></div>
-            <!-- Players Layer -->
-            <div id="players-layer" class="w-full h-full absolute inset-0 z-20"></div>
+    <!-- Top Info Bar -->
+    <div class="bg-white/90 backdrop-blur-md border-4 border-amber-300 rounded-3xl p-3 shadow-xl flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div id="player-avatar" class="text-4xl bg-amber-100 p-2 rounded-2xl border-2 border-amber-300 shadow-inner">
+                🐯
+            </div>
+            <div>
+                <div id="player-name" class="font-black text-slate-800 text-lg leading-tight">กำลังเข้าสู่เกม...</div>
+                <div class="text-xs font-bold text-sky-600 bg-sky-100 px-2 py-0.5 rounded-full inline-block mt-0.5">🎮 ปุ่มควบคุม</div>
+            </div>
         </div>
+        <div class="bg-gradient-to-r from-amber-400 to-orange-400 text-white font-black px-4 py-2 rounded-2xl shadow-md border-2 border-white flex flex-col items-center">
+            <span class="text-[10px] uppercase opacity-90">คะแนน</span>
+            <span id="player-score" class="text-xl">0</span>
+        </div>
+    </div>
 
-        <!-- Floating Circular Joystick at Bottom Right -->
-        <div class="absolute bottom-6 right-6 z-50 flex flex-col items-center">
-            <div id="joystick-base" class="shadow-2xl">
-                <div id="joystick-stick"></div>
+    <!-- Center Guidance Status -->
+    <div class="my-auto text-center px-4">
+        <div id="status-card" class="bg-white/80 backdrop-blur-sm rounded-3xl p-4 border-2 border-sky-300 shadow-lg inline-block">
+            <p id="game-status-text" class="text-base font-black text-sky-800">
+                🌱 บังคับตัวละครวิจัยหาคำตอบบนจอนะครับ!
+            </p>
+        </div>
+    </div>
+
+    <!-- Bottom Virtual Joystick Zone -->
+    <div class="flex justify-center items-center pb-6">
+        <div id="joystick-container" class="joystick-base w-48 h-48 rounded-full border-4 border-white relative flex justify-center items-center">
+            <div id="joystick-handle" class="joystick-handle w-20 h-20 rounded-full border-4 border-white absolute transition-transform duration-75 flex items-center justify-center text-white text-2xl font-black">
+                ✨
             </div>
         </div>
     </div>
@@ -90,152 +69,111 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        let playerId = null;
-        let myName = "Player_" + Math.floor(1000 + Math.random() * 9000);
-        // เกิดจุดเริ่มต้นตรงจุดสตาร์ทถนนพอดี (15%, 20%)
-        let posX = 15; 
-        let posY = 20; 
-        let allPlayers = {};
-        let currentGameState = {};
+        let playerId = localStorage.getItem('math_runner_player_id');
+        const avatars = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵'];
         
-        const avatars = ['🐯', '🦁', '🦊', '🐰', '🐼', '🐸', '🦄', '🐵', '🐱', '🐶', '🐥', '🐨'];
-        let myAvatar = avatars[Math.floor(Math.random() * avatars.length)];
-
-        function autoCreatePlayer() {
-            playerId = 'player_' + Math.random().toString(36).substr(2, 9);
-            const playerRef = db.ref('players/' + playerId);
-
-            playerRef.set({
-                name: myName,
-                avatar: myAvatar,
-                score: 0,
-                x: posX,
-                y: posY
-            });
-
-            playerRef.onDisconnect().remove();
-
-            db.ref('players').on('value', (snapshot) => {
-                allPlayers = snapshot.val() || {};
-                renderPlayers();
-                if (playerId && allPlayers[playerId]) {
-                    document.getElementById('player-score-tag').innerText = "คะแนน: " + (allPlayers[playerId].score || 0);
-                }
-            });
-
-            db.ref('gameState').on('value', (snapshot) => {
-                currentGameState = snapshot.val() || {};
-                renderOptions();
-                
-                const qEl = document.getElementById('mobile-question');
-                if (currentGameState.status === 'PLAYING') {
-                    qEl.innerText = `โจทย์ (${currentGameState.currentRound || 1}/5): ${currentGameState.question || ''}`;
-                } else if (currentGameState.status === 'FINISHED') {
-                    qEl.innerText = "🏆 จบเกมแล้ว!";
-                } else {
-                    qEl.innerText = "🏃 รอโฮสต์กดเริ่มเกม...";
-                }
-            });
+        if (!playerId) {
+            playerId = 'p_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('math_runner_player_id', playerId);
         }
 
-        function renderPlayers() {
-            const container = document.getElementById('players-layer');
-            const keys = Object.keys(allPlayers);
+        const randomAvatar = avatars[Math.floor(Math.random() * avatars.length)];
+        const defaultName = "น้อง" + Math.floor(100 + Math.random() * 900);
 
-            container.innerHTML = keys.map((id) => {
-                const p = allPlayers[id];
-                const pName = p.name || 'ผู้เล่น';
-                const x = p.x !== undefined ? p.x : 15;
-                const y = p.y !== undefined ? p.y : 20;
-                const isMe = id === playerId;
+        let myData = {
+            x: 50,
+            y: 50,
+            score: 0,
+            avatar: randomAvatar,
+            name: defaultName
+        };
 
-                return `
-                <div class="absolute transition-all duration-75 ease-out flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2 z-20" 
-                     style="left: ${x}%; top: ${y}%;">
-                    <div class="text-xl filter drop-shadow ${isMe ? 'scale-125 ring-2 ring-yellow-400 rounded-full bg-yellow-300/40 p-0.5' : ''}">
-                        ${p.avatar || '🐯'}
-                    </div>
-                    <span class="text-[8px] font-normal ${isMe ? 'bg-yellow-400 text-slate-900 font-bold' : 'bg-slate-900/80 text-white'} px-1 rounded whitespace-nowrap">
-                        ${pName}
-                    </span>
-                </div>`;
-            }).join('');
-        }
+        const playerRef = db.ref('players/' + playerId);
 
-        function renderOptions() {
-            const container = document.getElementById('options-layer');
-            if (currentGameState.status !== 'PLAYING' || !currentGameState.options) {
-                container.innerHTML = '';
-                return;
+        playerRef.once('value').then(snapshot => {
+            if (snapshot.exists()) {
+                myData = snapshot.val();
+            } else {
+                playerRef.set(myData);
             }
+            updatePlayerUI();
+        });
 
-            container.innerHTML = currentGameState.options.map((opt) => `
-                <div class="absolute transform -translate-x-1/2 -translate-y-1/2 bg-amber-100 border-2 border-amber-600 text-amber-900 font-black text-xs rounded-lg w-8 h-8 flex items-center justify-center shadow z-10"
-                     style="left: ${opt.x}%; top: ${opt.y}%;">
-                    ${opt.val}
-                </div>
-            `).join('');
+        playerRef.on('value', snapshot => {
+            if (snapshot.exists()) {
+                myData = snapshot.val();
+                updatePlayerUI();
+            }
+        });
+
+        function updatePlayerUI() {
+            document.getElementById('player-avatar').innerText = myData.avatar || '🐯';
+            document.getElementById('player-name').innerText = myData.name || 'ผู้เล่น';
+            document.getElementById('player-score').innerText = myData.score || 0;
         }
 
-        // --- Circular Joystick Logic ---
-        const base = document.getElementById('joystick-base');
-        const stick = document.getElementById('joystick-stick');
+        // Joystick Logic
+        const container = document.getElementById('joystick-container');
+        const handle = document.getElementById('joystick-handle');
+
         let isDragging = false;
-        let moveInterval = null;
-        let deltaX = 0;
-        let deltaY = 0;
-        const maxRadius = 38; 
+        let centerX, centerY;
+        const maxDistance = 60; 
 
         function handleStart(e) {
             isDragging = true;
-            if (!moveInterval) moveInterval = setInterval(updatePosition, 50); 
+            const rect = container.getBoundingClientRect();
+            centerX = rect.left + rect.width / 2;
+            centerY = rect.top + rect.height / 2;
+            moveJoystick(e);
         }
 
         function handleMove(e) {
             if (!isDragging) return;
-            const touch = e.touches ? e.touches[0] : e;
-            const rect = base.getBoundingClientRect();
-            let dx = touch.clientX - (rect.left + rect.width / 2);
-            let dy = touch.clientY - (rect.top + rect.height / 2);
-            const distance = Math.sqrt(dx * dx + dy * dy);
-
-            if (distance > maxRadius) {
-                dx = (dx / distance) * maxRadius;
-                dy = (dy / distance) * maxRadius;
-            }
-
-            stick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-            deltaX = (dx / maxRadius) * 1.5;
-            deltaY = (dy / maxRadius) * 1.5;
+            moveJoystick(e);
         }
 
         function handleEnd() {
             isDragging = false;
-            stick.style.transform = `translate(-50%, -50%)`;
-            deltaX = 0; deltaY = 0;
-            clearInterval(moveInterval);
-            moveInterval = null;
+            handle.style.transform = `translate(0px, 0px)`;
         }
 
-        function updatePosition() {
-            if (deltaX === 0 && deltaY === 0) return;
-            posX = Math.min(Math.max(posX + deltaX, 3), 97);
-            posY = Math.min(Math.max(posY + deltaY, 3), 97);
+        function moveJoystick(e) {
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
-            if (playerId) {
-                db.ref('players/' + playerId + '/x').set(posX);
-                db.ref('players/' + playerId + '/y').set(posY);
+            let deltaX = clientX - centerX;
+            let deltaY = clientY - centerY;
+            const distance = Math.hypot(deltaX, deltaY);
+
+            if (distance > maxDistance) {
+                deltaX = (deltaX / distance) * maxDistance;
+                deltaY = (deltaY / distance) * maxDistance;
             }
+
+            handle.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+
+            // Convert movement to map percentage (Speed factor)
+            const speed = 1.2;
+            let newX = myData.x + (deltaX / maxDistance) * speed;
+            let newY = myData.y + (deltaY / maxDistance) * speed;
+
+            newX = Math.max(5, Math.min(95, newX));
+            newY = Math.max(10, Math.min(90, newY));
+
+            myData.x = newX;
+            myData.y = newY;
+
+            playerRef.update({ x: newX, y: newY });
         }
 
-        base.addEventListener('touchstart', handleStart);
+        container.addEventListener('touchstart', handleStart);
         window.addEventListener('touchmove', handleMove);
         window.addEventListener('touchend', handleEnd);
-        base.addEventListener('mousedown', handleStart);
+
+        container.addEventListener('mousedown', handleStart);
         window.addEventListener('mousemove', handleMove);
         window.addEventListener('mouseup', handleEnd);
-
-        autoCreatePlayer();
     </script>
 </body>
 </html>
