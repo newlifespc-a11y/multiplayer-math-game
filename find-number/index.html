@@ -74,8 +74,8 @@
         let playersData = {};
         const colors = ['#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#10B981'];
 
-        // Generate QR Code dynamically targeting player.html
-        const playerUrl = window.location.href.replace('index.html', 'player.html');
+        // Generate QR Code dynamically targeting player.html (แก้ไขแล้ว)
+        const playerUrl = "https://newlifespc-a11y.github.io/multiplayer-math-game/find-number/player.html";
         new QRCode(document.getElementById("qrcode"), {
             text: playerUrl,
             width: 140,
@@ -126,7 +126,7 @@
                 const p = playersData[id];
                 const color = colors[index % colors.length];
                 const score = p.score || 0;
-                // Maximum 10 points to reach the finish line (90% width)
+                // Maximum 10 points to reach the finish line (85% width)
                 const positionPercent = Math.min((score / 10) * 85, 85);
 
                 return `
