@@ -3,101 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Math Runner - Host Display</title>
+    <title>Math Runner - Host Display (SYNCED)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        /* ดึงรูปภาพ Gemini_Generated_Image.png ที่อัปโหลดในโฟลเดอร์เดียวกันมาใช้เป็น Background */
-        .custom-game-bg {
-            background-image: url('./Gemini_Generated_Image.png');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            position: relative;
-        }
-
-        /* ป้ายตัวเลขคำตอบทรงการ์ตูนป๊อปอัพ เด่นชัด */
-        .cute-target {
-            background: linear-gradient(180deg, #fef08a 0%, #facc15 100%);
-            border: 4px solid #ffffff;
-            box-shadow: 0 6px 0px #ca8a04, 0 10px 15px rgba(0,0,0,0.25);
-            animation: bounce-gentle 1.2s infinite alternate ease-in-out;
-        }
-
-        @keyframes bounce-gentle {
-            0% { transform: translate(-50%, -50%) translateY(0px) scale(1); }
-            100% { transform: translate(-50%, -50%) translateY(-6px) scale(1.05); }
+        .arena-bg {
+            background-color: #1e293b;
+            background-image: radial-gradient(#334155 1px, transparent 1px);
+            background-size: 20px 20px;
         }
     </style>
 </head>
-<body class="bg-amber-50 text-slate-800 h-screen flex flex-col font-sans select-none overflow-hidden">
+<body class="bg-slate-900 text-white min-h-screen flex flex-col font-sans select-none">
 
     <!-- Header Section -->
-    <header class="px-6 py-3 bg-white/90 border-b-4 border-amber-300 flex justify-between items-center shadow-md z-30">
-        <div class="flex items-center gap-3">
-            <span class="text-4xl">🎮</span>
-            <div>
-                <h1 class="text-2xl font-black text-amber-800 tracking-wide">
-                    MATH RUNNER: วิ่งผจญภัยหาคำตอบ
-                </h1>
-                <p class="text-xs font-bold text-slate-500">บังคับตัวละครวิ่งไปชนคำตอบที่ถูกต้อง!</p>
-            </div>
+    <header class="p-4 bg-slate-800 flex justify-between items-center border-b border-slate-700">
+        <div>
+            <h1 class="text-2xl font-bold text-yellow-400">🏃 Math Runner Grand Prix</h1>
+            <p class="text-xs text-slate-400">สแกน QR Code บนมือถือเพื่อเข้าร่วมการแข่งขัน!</p>
         </div>
-        <div class="flex items-center gap-3">
-            <button onclick="startGame()" class="bg-gradient-to-b from-amber-400 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-white border-b-4 border-yellow-700 active:border-b-0 px-6 py-2 rounded-2xl font-black shadow-lg transition transform hover:scale-105 active:scale-95 text-base flex items-center gap-2">
-                <span>▶</span> เริ่มเกม
-            </button>
-            <button onclick="resetGame()" class="bg-gradient-to-b from-rose-400 to-red-500 hover:from-rose-300 hover:to-red-400 text-white border-b-4 border-red-700 active:border-b-0 px-4 py-2 rounded-2xl font-black shadow-lg transition text-base flex items-center gap-1">
-                <span>🔄</span> รีเซ็ต
-            </button>
+        <div class="flex items-center space-x-4">
+            <button onclick="resetGame()" class="bg-rose-600 hover:bg-rose-700 px-4 py-2 rounded-lg font-bold text-white shadow transition text-sm">รีเซ็ตระบบ</button>
         </div>
     </header>
 
-    <div class="flex-1 flex p-4 gap-4 overflow-hidden relative">
-        
-        <!-- Sidebar Scoreboard + QR Code -->
-        <div class="w-64 bg-white/95 backdrop-blur-md p-4 rounded-3xl border-4 border-amber-200 flex flex-col items-center shadow-xl z-20">
+    <div class="flex-1 flex flex-col md:flex-row p-4 gap-4">
+        <!-- Sidebar: QR Code & Player List -->
+        <div class="w-full md:w-1/4 bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col items-center">
+            <h2 class="text-lg font-bold mb-2 text-center text-cyan-400">สแกนเพื่อเล่นเกม</h2>
+            <div id="qrcode" class="bg-white p-3 rounded-lg shadow-md mb-4"></div>
             
-            <!-- QR Code Section -->
-            <div class="bg-amber-50 p-3 rounded-2xl border-2 border-amber-200 shadow-inner flex flex-col items-center mb-3 w-full">
-                <div id="qrcode" class="bg-white p-2 rounded-xl shadow-md border border-slate-200"></div>
-                <span class="text-xs font-black text-amber-800 mt-2 uppercase tracking-wider text-center">📱 สแกน QR Code เข้าเล่น</span>
-            </div>
-
-            <!-- Scoreboard Section -->
-            <h3 class="font-black text-amber-800 border-b-2 border-amber-100 pb-2 mb-2 flex justify-between items-center text-sm w-full">
-                <span>🏆 อันดับคะแนน</span>
-                <span id="player-count" class="bg-amber-200 text-amber-900 text-xs px-2.5 py-0.5 rounded-full font-bold">0 คน</span>
+            <h3 class="font-semibold text-slate-300 w-full border-b border-slate-600 pb-1 mb-2">
+                ผู้เล่นในสนาม (<span id="player-count">0</span>)
             </h3>
-            <ul id="player-join-list" class="w-full flex-1 overflow-y-auto space-y-2 text-xs">
-                <li class="text-slate-400 text-center italic py-4 font-bold">รอเด็กๆ สแกน...</li>
+            <ul id="player-join-list" class="w-full flex-1 overflow-y-auto space-y-2 text-sm">
+                <li class="text-slate-500 text-center italic py-4">กำลังรอผู้เล่นเข้าร่วม...</li>
             </ul>
         </div>
 
-        <!-- Main Display Map View -->
-        <div class="flex-1 custom-game-bg rounded-3xl border-4 border-white shadow-2xl relative flex flex-col justify-start items-center overflow-hidden p-4">
-            
-            <!-- Top Floating Question Box -->
-            <div class="bg-white/95 border-4 border-amber-300 rounded-3xl px-8 py-3 text-center shadow-xl z-20 flex items-center gap-6 mt-2">
-                <span id="round-label" class="text-xs font-black bg-amber-400 text-white px-3 py-1 rounded-full uppercase tracking-wider shadow border border-amber-500">
-                    รอเริ่มเกม
-                </span>
-                <div id="question-text" class="text-3xl font-black text-slate-800 tracking-wider">
-                    กด "เริ่มเกม" ด้านบนเพื่อเริ่มสุ่มโจทย์!
-                </div>
+        <!-- Main Arena View -->
+        <div class="flex-1 bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col relative overflow-hidden min-h-[400px]">
+            <div id="players-layer" class="w-full h-full relative z-10 arena-bg">
+                <!-- Dynamic player avatars will render here -->
             </div>
-
-            <!-- Target Options Layer -->
-            <div id="options-layer" class="w-full h-full absolute inset-0 z-10"></div>
-            <!-- Players Avatar Layer -->
-            <div id="players-layer" class="w-full h-full absolute inset-0 z-20"></div>
-
+            <!-- พื้นหลังสนามที่จะเลื่อนตามกล้อง (ถ้าจำเป็นในอนาคต) -->
         </div>
     </div>
 
     <script>
+        // Use the specified Firebase config
         const firebaseConfig = {
             databaseURL: "https://multiplayer-math-game-e021c-default-rtdb.asia-southeast1.firebasedatabase.app",
             projectId: "multiplayer-math-game-e021c"
@@ -106,214 +62,85 @@
         const db = firebase.database();
 
         let playersData = {};
-        let currentGameState = {};
-        let isProcessingHit = false;
+        const colors = ['#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4'];
 
-        // จุดพิกัดกระจายป้ายคำตอบบนแผนที่
-        const mapPoints = [
-            { x: 20, y: 35 }, { x: 40, y: 30 }, { x: 60, y: 32 }, { x: 80, y: 38 },
-            { x: 75, y: 65 }, { x: 55, y: 60 }, { x: 35, y: 62 }, { x: 20, y: 58 },
-            { x: 25, y: 80 }, { x: 45, y: 85 }, { x: 65, y: 85 }, { x: 80, y: 80 }
-        ];
-
+        // Generate QR Code targeting player.html
         const playerUrl = "https://newlifespc-a11y.github.io/multiplayer-math-game/find-number/player.html";
-        new QRCode(document.getElementById("qrcode"), { text: playerUrl, width: 125, height: 125 });
+        new QRCode(document.getElementById("qrcode"), {
+            text: playerUrl,
+            width: 140,
+            height: 140
+        });
 
+        // Listen for Realtime Player Updates
         db.ref('players').on('value', (snapshot) => {
             playersData = snapshot.val() || {};
-            renderPlayers();
-            updateScoreboard();
-            checkCollisions();
+            renderArena();
+            updateJoinList();
         });
 
-        db.ref('gameState').on('value', (snapshot) => {
-            currentGameState = snapshot.val() || {};
-            updateUIState();
-            renderOptions();
-        });
-
-        function updateUIState() {
-            const qEl = document.getElementById('question-text');
-            const roundEl = document.getElementById('round-label');
-
-            if (currentGameState.status === 'PLAYING') {
-                qEl.innerText = currentGameState.question || "กำลังดึงโจทย์...";
-                roundEl.innerText = `ข้อที่ ${currentGameState.currentRound || 1} / 5`;
-            } else if (currentGameState.status === 'FINISHED') {
-                qEl.innerText = "🎉 จบการแข่งขันแล้ว เก่งมากๆ ครับ!";
-                roundEl.innerText = "จบเกม";
-            } else {
-                qEl.innerText = 'กด "เริ่มเกม" ด้านบนเพื่อเริ่มสุ่มโจทย์';
-                roundEl.innerText = 'รอเริ่มเกม';
-            }
-        }
-
-        function updateScoreboard() {
+        function updateJoinList() {
             const listEl = document.getElementById('player-join-list');
             const countEl = document.getElementById('player-count');
             const keys = Object.keys(playersData);
-            countEl.innerText = `${keys.length} คน`;
+            countEl.innerText = keys.length;
 
             if (keys.length === 0) {
-                listEl.innerHTML = '<li class="text-slate-400 text-center italic py-4 font-bold">รอเด็กๆ สแกน...</li>';
+                listEl.innerHTML = '<li class="text-slate-500 text-center italic py-4">กำลังรอผู้เล่นเข้าร่วม...</li>';
                 return;
             }
 
-            const sortedKeys = keys.sort((a,b) => (playersData[b].score || 0) - (playersData[a].score || 0));
-
-            listEl.innerHTML = sortedKeys.map((id, idx) => {
+            listEl.innerHTML = keys.map((id, index) => {
                 const p = playersData[id];
-                return `<li class="flex items-center justify-between bg-amber-50 p-2 rounded-2xl border border-amber-200 shadow-sm">
-                    <span class="font-bold flex items-center gap-2 text-slate-700">
-                        <span class="text-[10px] bg-amber-400 text-white font-black px-2 py-0.5 rounded-full border border-amber-500">#${idx+1}</span>
-                        <span class="text-xl">${p.avatar || '🐯'}</span>
-                        <span class="truncate max-w-[85px] font-black">${p.name || 'ผู้เล่น'}</span>
+                const color = colors[index % colors.length];
+                const avatar = p.avatar || '🏃'; // Default avatar if not specified
+                return `<li class="flex items-center justify-between bg-slate-700/50 p-2 rounded border border-slate-600">
+                    <span class="font-medium flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full" style="background-color: ${color}"></span>
+                        <span class="text-lg">${avatar}</span>
+                        ${p.name}
                     </span>
-                    <span class="text-xs font-black text-amber-600 bg-amber-100 px-2.5 py-1 rounded-xl border border-amber-300">${p.score || 0} คะแนน</span>
+                    <span class="text-xs bg-slate-800 px-2 py-1 rounded text-slate-300 font-bold">คะแนน: ${p.score || 0}</span>
                 </li>`;
             }).join('');
         }
 
-        function renderPlayers() {
+        function renderArena() {
             const container = document.getElementById('players-layer');
             const keys = Object.keys(playersData);
 
             if (keys.length === 0) {
-                container.innerHTML = '';
+                container.innerHTML = '<div class="absolute inset-0 flex items-center justify-center text-slate-500 font-semibold arena-bg">ยังไม่มีผู้เล่นอยู่ในสนาม</div>';
                 return;
             }
 
-            container.innerHTML = keys.map((id) => {
+            container.innerHTML = keys.map((id, index) => {
                 const p = playersData[id];
-                const x = p.x !== undefined ? p.x : 20;
-                const y = p.y !== undefined ? p.y : 35;
+                const color = colors[index % colors.length];
+                const avatar = p.avatar || '🏃'; 
+                // X, Y positions are normalized to 0-100% of the arena size
+                const x = p.x !== undefined ? p.x : 50;
+                const y = p.y !== undefined ? p.y : 50;
 
                 return `
-                <div class="absolute transition-all duration-75 ease-out flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2 z-20" 
+                <div class="absolute transition-all duration-100 ease-out flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2" 
                      style="left: ${x}%; top: ${y}%;">
-                    <div class="text-4xl filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.3)]">
-                        ${p.avatar || '🐯'}
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg border-2 border-white ring-2 ring-black/20" 
+                         style="background-color: ${color}">
+                        ${avatar}
                     </div>
-                    <span class="text-[10px] font-black bg-white/95 text-amber-900 px-2.5 py-0.5 rounded-full border-2 border-amber-400 shadow-md whitespace-nowrap">
-                        ${p.name || 'ผู้เล่น'}
+                    <span class="mt-1 text-[11px] font-bold bg-slate-900/90 text-white px-2 py-0.5 rounded shadow border border-slate-700 whitespace-nowrap">
+                        ${p.name} (${p.score || 0})
                     </span>
                 </div>`;
             }).join('');
         }
 
-        function renderOptions() {
-            const container = document.getElementById('options-layer');
-            if (currentGameState.status !== 'PLAYING' || !currentGameState.options) {
-                container.innerHTML = '';
-                return;
-            }
-
-            container.innerHTML = currentGameState.options.map((opt) => `
-                <div class="absolute transform cute-target text-slate-800 font-black text-2xl rounded-2xl w-14 h-14 flex items-center justify-center z-10"
-                     style="left: ${opt.x}%; top: ${opt.y}%;">
-                    ${opt.val}
-                </div>
-            `).join('');
-        }
-
-        function checkCollisions() {
-            if (currentGameState.status !== 'PLAYING' || !currentGameState.options || isProcessingHit) return;
-
-            const targetVal = currentGameState.correctAnswer;
-            const targetOpt = currentGameState.options.find(o => o.val === targetVal);
-            if (!targetOpt) return;
-
-            Object.keys(playersData).forEach(pId => {
-                if (isProcessingHit) return;
-                const p = playersData[pId];
-                const dist = Math.hypot(p.x - targetOpt.x, p.y - targetOpt.y);
-
-                if (dist < 5) {
-                    isProcessingHit = true;
-                    let newScore = (p.score || 0) + 1;
-                    
-                    db.ref('players/' + pId + '/score').set(newScore);
-
-                    let currentRound = currentGameState.currentRound || 1;
-                    let nextRound = currentRound + 1;
-
-                    if (nextRound > 5) {
-                        db.ref('gameState').set({ status: 'FINISHED' });
-                        isProcessingHit = false;
-                    } else {
-                        setTimeout(() => {
-                            generateNextQuestion(nextRound);
-                            isProcessingHit = false;
-                        }, 300);
-                    }
-                }
-            });
-        }
-
-        function generateNextQuestion(roundNum) {
-            const ops = ['+', '-', '*', '/'];
-            const op = ops[Math.floor(Math.random() * ops.length)];
-            let n1, n2, ans, qText;
-
-            if (op === '+') {
-                n1 = Math.floor(Math.random() * 10);
-                n2 = Math.floor(Math.random() * 10);
-                ans = n1 + n2;
-                qText = `${n1} + ${n2} = ?`;
-            } else if (op === '-') {
-                n1 = Math.floor(Math.random() * 10);
-                n2 = Math.floor(Math.random() * (n1 + 1));
-                ans = n1 - n2;
-                qText = `${n1} - ${n2} = ?`;
-            } else if (op === '*') {
-                n1 = Math.floor(Math.random() * 10);
-                n2 = Math.floor(Math.random() * 10);
-                ans = n1 * n2;
-                qText = `${n1} × ${n2} = ?`;
-            } else {
-                n2 = Math.floor(Math.random() * 9) + 1;
-                ans = Math.floor(Math.random() * 10);
-                n1 = n2 * ans;
-                qText = `${n1} ÷ ${n2} = ?`;
-            }
-
-            let choices = [ans];
-            while (choices.length < 5) {
-                let wrong = Math.floor(Math.random() * 20);
-                if (!choices.includes(wrong)) choices.push(wrong);
-            }
-            choices.sort(() => Math.random() - 0.5);
-
-            const shuffledPoints = [...mapPoints].sort(() => Math.random() - 0.5);
-
-            const optionsData = choices.map((val, idx) => ({
-                val: val,
-                x: shuffledPoints[idx].x,
-                y: shuffledPoints[idx].y
-            }));
-
-            db.ref('gameState').set({
-                status: 'PLAYING',
-                currentRound: roundNum,
-                question: qText,
-                correctAnswer: ans,
-                options: optionsData
-            });
-        }
-
-        function startGame() {
-            isProcessingHit = false;
-            Object.keys(playersData).forEach(pId => {
-                db.ref('players/' + pId + '/score').set(0);
-            });
-            generateNextQuestion(1);
-        }
-
         function resetGame() {
-            if (confirm("ต้องการรีเซ็ตเกมและลบผู้เล่นทั้งหมดใช่หรือไม่?")) {
-                isProcessingHit = false;
-                db.ref('players').set({});
-                db.ref('gameState').set({ status: 'WAITING' });
+            if (confirm("ต้องการลบข้อมูลผู้เล่นและรีเซ็ตเกมใช่หรือไม่?")) {
+                db.ref().set({
+                    players: {}
+                });
             }
         }
     </script>
