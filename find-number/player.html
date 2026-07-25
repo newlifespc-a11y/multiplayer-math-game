@@ -3,185 +3,218 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Math Runner - Player Controller</title>
+    <title>Math Runner - Mobile Controller</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         body {
-            touch-action: manipulation;
-            user-select: none;
+            -webkit-touch-callout: none;
             -webkit-user-select: none;
+            user-select: none;
+            touch-action: manipulation;
+            overflow: hidden; /* ป้องกันการเลื่อนหน้าจอเบราว์เซอร์ปกติ */
         }
-
-        /* ใช้ภาพ Gemini_Generated_Image.png เป็นฉากหลังมือถือพร้อม Overlay นุ่มตา */
-        .player-bg {
-            background-image: linear-gradient(rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.45)), url('./Gemini_Generated_Image.png');
+        /* กำหนดขนาดสนามเกมให้กว้างกว่าหน้าจอมือถือ */
+        #game-arena {
+            width: 2000px; /* ความกว้างสนาม */
+            height: 2000px; /* ความสูงสนาม */
+            position: absolute;
+            background-image: url('https://w0.peakpx.com/wallpaper/346/304/HD-wallpaper-nature-field-clouds-sky-landscapes-grass.jpg');
             background-size: cover;
             background-position: center;
         }
-
-        /* จอยสติ๊กการ์ตูนทรงกลมนุ่มนวล สดใส */
+        /* คอนเทนเนอร์หลักที่ทำหน้าที่เป็นกล้องตัดส่วน */
+        #game-viewport {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            overflow: hidden; /* ซ่อนส่วนสนามที่เกินหน้าจอ */
+        }
+        /* สไตล์สำหรับปุ่มจอยสติ๊ก */
         .joystick-base {
-            background: radial-gradient(circle, #fef08a 0%, #facc15 100%);
-            box-shadow: 0 10px 20px rgba(202, 138, 4, 0.35), inset 0 4px 8px rgba(255,255,255,0.9);
+            width: 150px;
+            height: 150px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            touch-action: none;
         }
         .joystick-handle {
-            background: radial-gradient(circle, #34d399 0%, #059669 100%);
-            box-shadow: 0 6px 15px rgba(5, 150, 105, 0.4), inset 0 2px 5px rgba(255,255,255,0.9);
+            width: 80px;
+            height: 80px;
+            background: #4ade80;
+            border-radius: 50%;
+            position: absolute;
+            top: 35px;
+            left: 35px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            touch-action: none;
         }
     </style>
 </head>
-<body class="player-bg h-screen flex flex-col justify-between p-4 font-sans overflow-hidden">
+<body class="bg-slate-900 text-white min-h-screen">
 
-    <!-- Top Info Bar -->
-    <div class="bg-white/95 backdrop-blur-md border-4 border-amber-300 rounded-3xl p-3 shadow-xl flex items-center justify-between z-10">
-        <div class="flex items-center gap-3">
-            <div id="player-avatar" class="text-4xl bg-amber-100 p-2 rounded-2xl border-2 border-amber-300 shadow-inner">
-                🐯
+    <div id="game-viewport">
+        <!-- สนามเกมจริงที่จะเลื่อนไปมา -->
+        <div id="game-arena">
+            <div id="players-layer" class="w-full h-full relative">
+                <!-- ตัวละครจะถูกวาดที่นี่ -->
             </div>
-            <div>
-                <div id="player-name" class="font-black text-slate-800 text-lg leading-tight">กำลังเข้าสู่เกม...</div>
-                <div class="text-xs font-bold text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-full inline-block mt-0.5 border border-amber-200">🎮 จอยสติ๊กควบคุม</div>
+            <div id="answers-layer" class="w-full h-full absolute top-0 left-0">
+                <!-- คำตอบจะถูกวาดที่นี่ -->
             </div>
         </div>
-        <div class="bg-gradient-to-r from-amber-400 to-yellow-500 text-white font-black px-4 py-2 rounded-2xl shadow-md border-2 border-white flex flex-col items-center">
-            <span class="text-[10px] uppercase tracking-wider opacity-90">คะแนน</span>
-            <span id="player-score" class="text-xl leading-none">0</span>
+
+        <!-- UI ส่วนหน้าต่าง (Fixed Position) -->
+        <div id="ui-layer" class="absolute top-0 left-0 w-full h-full p-4 flex flex-col pointer-events-none">
+            <!-- ส่วนหัว: ข้อมูลผู้เล่น -->
+            <div class="bg-white p-3 rounded-3xl flex justify-between items-center shadow-lg pointer-events-auto border-4 border-yellow-400">
+                <div class="flex items-center gap-3">
+                    <span class="text-4xl">🐹</span>
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800">น้อง548</h2>
+                        <span class="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">🎮 จอยสติ๊กควบคุม</span>
+                    </div>
+                </div>
+                <div class="bg-yellow-400 text-white p-3 px-5 rounded-2xl text-center shadow-md">
+                    <div class="text-xs">คะแนน</div>
+                    <div class="text-3xl font-black">0</div>
+                </div>
+            </div>
+
+            <!-- ข้อความแนะนำที่จะหายไป -->
+            <div id="instruction-msg" class="bg-white text-slate-800 p-6 rounded-3xl shadow-xl border-4 border-yellow-400 text-center mt-auto mb-40 pointer-events-auto mx-4 transition-opacity duration-500">
+                <p class="text-lg font-semibold flex items-center justify-center gap-2">🌱 เลื่อนจอยสติ๊กด้านล่าง เพื่อบังคับ<br>ตัวละครวิ่งไปหาคำตอบครับ!</p>
+            </div>
+        </div>
+
+        <!-- จอยสติ๊กควบคุม -->
+        <div class="joystick-base" id="joystick-base">
+            <div class="joystick-handle" id="joystick-handle"></div>
         </div>
     </div>
 
-    <!-- Center Guidance Status -->
-    <div class="my-auto text-center px-4 z-10">
-        <div id="status-card" class="bg-white/95 backdrop-blur-sm rounded-3xl p-4 border-4 border-amber-300 shadow-lg inline-block">
-            <p id="game-status-text" class="text-base font-black text-amber-900">
-                🌱 เลื่อนจอยสติ๊กด้านล่าง เพื่อบังคับตัวละครวิ่งไปหาคำตอบครับ!
-            </p>
-        </div>
-    </div>
-
-    <!-- Bottom Virtual Joystick Zone -->
-    <div class="flex justify-center items-center pb-6 z-10">
-        <div id="joystick-container" class="joystick-base w-48 h-48 rounded-full border-4 border-white relative flex justify-center items-center">
-            <div id="joystick-handle" class="joystick-handle w-20 h-20 rounded-full border-4 border-white absolute transition-transform duration-75 flex items-center justify-center text-white text-2xl font-black">
-                ✨
-            </div>
-        </div>
-    </div>
-
+    <!-- Firebase Script & Logic -->
     <script>
+        // --- ส่วนที่ต้องทำ ---
+        // 1. นำค่า Firebase Config ของอาจารย์มาใส่ที่นี่
         const firebaseConfig = {
-            databaseURL: "https://multiplayer-math-game-e021c-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "multiplayer-math-game-e021c"
+            // apiKey: "...",
+            // authDomain: "...",
+            // databaseURL: "...",
+            // projectId: "...",
+            // storageBucket: "...",
+            // messagingSenderId: "...",
+            // appId: "..."
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        let playerId = localStorage.getItem('math_runner_player_id');
-        const avatars = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵'];
-        
-        if (!playerId) {
-            playerId = 'p_' + Math.random().toString(36).substr(2, 9);
-            localStorage.setItem('math_runner_player_id', playerId);
+        let playerId = 'player_548'; // สมมติ ID
+        const arenaWidth = 2000;
+        const arenaHeight = 2000;
+        let posX = arenaWidth / 2; // เริ่มตรงกลางสนาม
+        let posY = arenaHeight / 2;
+        const speed = 10; // ความเร็วในการเคลื่อนที่
+
+        const arena = document.getElementById('game-arena');
+        const instruction = document.getElementById('instruction-msg');
+
+        // ฟังก์ชันอัปเดตตำแหน่งกล้อง (Camera Follow)
+        function updateCamera() {
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+
+            // คำนวณตำแหน่งเพื่อสร้างเอฟเฟกต์กล้องตามตัวละคร
+            let targetX = -posX + (viewportWidth / 2);
+            let targetY = -posY + (viewportHeight / 2);
+
+            // จำกัดขอบเขตไม่ให้กล้องเลื่อนออกนอกสนามเกม
+            targetX = Math.min(0, Math.max(targetX, -(arenaWidth - viewportWidth)));
+            targetY = Math.min(0, Math.max(targetY, -(arenaHeight - viewportHeight)));
+
+            // เลื่อนสนามเกมจริงตามตำแหน่งที่คำนวณได้
+            arena.style.transform = `translate(${targetX}px, ${targetY}px)`;
         }
 
-        const randomAvatar = avatars[Math.floor(Math.random() * avatars.length)];
-        const defaultName = "น้อง" + Math.floor(100 + Math.random() * 900);
-
-        let myData = {
-            x: 50,
-            y: 50,
-            score: 0,
-            avatar: randomAvatar,
-            name: defaultName
-        };
-
-        const playerRef = db.ref('players/' + playerId);
-
-        playerRef.once('value').then(snapshot => {
-            if (snapshot.exists()) {
-                myData = snapshot.val();
-            } else {
-                playerRef.set(myData);
+        // ฟังชันก์ลบข้อความคำแนะนำเมื่อเริ่มเล่น
+        function hideInstruction() {
+            if (instruction) {
+                instruction.style.opacity = '0';
+                setTimeout(() => {
+                    if (instruction.parentNode) {
+                        instruction.parentNode.removeChild(instruction);
+                    }
+                }, 500); // รอ animation หายไป
             }
-            updatePlayerUI();
-        });
-
-        playerRef.on('value', snapshot => {
-            if (snapshot.exists()) {
-                myData = snapshot.val();
-                updatePlayerUI();
-            }
-        });
-
-        function updatePlayerUI() {
-            document.getElementById('player-avatar').innerText = myData.avatar || '🐯';
-            document.getElementById('player-name').innerText = myData.name || 'ผู้เล่น';
-            document.getElementById('player-score').innerText = myData.score || 0;
         }
 
-        // Joystick Logic
-        const container = document.getElementById('joystick-container');
+        // --- ส่วนควบคุมจอยสติ๊ก (ฉบับย่อเพื่อจำลองการทำงาน) ---
         const handle = document.getElementById('joystick-handle');
-
+        const base = document.getElementById('joystick-base');
         let isDragging = false;
-        let centerX, centerY;
-        const maxDistance = 60; 
+        let dragStartX, dragStartY;
 
-        function handleStart(e) {
+        // วาดตัวละครเริ่มแรก (เพื่อจำลอง)
+        const playersLayer = document.getElementById('players-layer');
+        playersLayer.innerHTML = `<div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg border-2 border-white ring-2 ring-black/20 absolute" style="left: ${posX}px; top: ${posY}px; background-color: #EF4444; transform: translate(-50%, -50%);">🐹</div>`;
+
+        // สุ่มคำตอบตัวอย่างไว้ด้านข้าง
+        const answersLayer = document.getElementById('answers-layer');
+        answersLayer.innerHTML = `
+            <div class="bg-white text-slate-800 p-2 rounded px-4 font-bold absolute" style="left: 100px; top: 1000px; transform: translate(-50%, -50%);">10</div>
+            <div class="bg-white text-slate-800 p-2 rounded px-4 font-bold absolute" style="left: 1800px; top: 500px; transform: translate(-50%, -50%);">13</div>
+        `;
+
+        handle.addEventListener('touchstart', (e) => {
             isDragging = true;
-            const rect = container.getBoundingClientRect();
-            centerX = rect.left + rect.width / 2;
-            centerY = rect.top + rect.height / 2;
-            moveJoystick(e);
-        }
+            dragStartX = e.touches[0].clientX;
+            dragStartY = e.touches[0].clientY;
+            hideInstruction(); // ซ่อนคำแนะนำทันทีที่เริ่มจับจอย
+        });
 
-        function handleMove(e) {
+        document.addEventListener('touchmove', (e) => {
             if (!isDragging) return;
-            moveJoystick(e);
-        }
+            const touchX = e.touches[0].clientX;
+            const touchY = e.touches[0].clientY;
+            const diffX = touchX - dragStartX;
+            const diffY = touchY - dragStartY;
+            const distance = Math.sqrt(diffX*diffX + diffY*diffY);
+            const maxRadius = 35; // ขอบเขตการลากจอย
 
-        function handleEnd() {
-            isDragging = false;
-            handle.style.transform = `translate(0px, 0px)`;
-        }
+            if (distance > 0) {
+                const moveX = (diffX / distance) * Math.min(distance, maxRadius);
+                const moveY = (diffY / distance) * Math.min(distance, maxRadius);
+                handle.style.transform = `translate(${moveX}px, ${moveY}px)`;
 
-        function moveJoystick(e) {
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                // คำนวณความเร็วตามทิศทางจอย
+                const speedX = (diffX / distance) * (Math.min(distance, maxRadius) / maxRadius) * speed;
+                const speedY = (diffY / distance) * (Math.min(distance, maxRadius) / maxRadius) * speed;
 
-            let deltaX = clientX - centerX;
-            let deltaY = clientY - centerY;
-            const distance = Math.hypot(deltaX, deltaY);
+                // อัปเดตตำแหน่งผู้เล่น
+                posX = Math.min(Math.max(20, posX + speedX), arenaWidth - 20);
+                posY = Math.min(Math.max(20, posY + speedY), arenaHeight - 20);
 
-            if (distance > maxDistance) {
-                deltaX = (deltaX / distance) * maxDistance;
-                deltaY = (deltaY / distance) * maxDistance;
+                // วาดตัวละครใหม่ (เพื่อจำลอง)
+                playersLayer.innerHTML = `<div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg border-2 border-white ring-2 ring-black/20 absolute" style="left: ${posX}px; top: ${posY}px; background-color: #EF4444; transform: translate(-50%, -50%);">🐹</div>`;
+
+                // **นี่คือส่วนสำคัญที่แก้ไข: สั่งให้กล้องเลื่อนตาม**
+                updateCamera(); 
             }
+        });
 
-            handle.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+        document.addEventListener('touchend', () => {
+            isDragging = false;
+            handle.style.transform = 'translate(0px, 0px)';
+        });
 
-            // ความเร็วการเคลื่อนที่บนแผนที่
-            const speed = 1.2;
-            let newX = myData.x + (deltaX / maxDistance) * speed;
-            let newY = myData.y + (deltaY / maxDistance) * speed;
+        // อัปเดตตำแหน่งเริ่มต้นของกล้อง
+        updateCamera();
 
-            newX = Math.max(5, Math.min(95, newX));
-            newY = Math.max(10, Math.min(90, newY));
-
-            myData.x = newX;
-            myData.y = newY;
-
-            playerRef.update({ x: newX, y: newY });
-        }
-
-        container.addEventListener('touchstart', handleStart);
-        window.addEventListener('touchmove', handleMove);
-        window.addEventListener('touchend', handleEnd);
-
-        container.addEventListener('mousedown', handleStart);
-        window.addEventListener('mousemove', handleMove);
-        window.addEventListener('mouseup', handleEnd);
     </script>
 </body>
 </html>
