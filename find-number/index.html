@@ -3,21 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Math Runner - Green Meadow Fantasy</title>
+    <title>Math Runner - Bright Cute Lawn</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        /* สนามหญ้าการ์ตูนสดใส สบายตา ไม่มีรูปสัตว์มาเกะกะ */
-        .grass-map {
-            background-image: url('https://img.freepik.com/free-vector/scene-with-green-grass-field-blue-sky_1308-56832.jpg');
-            background-size: cover;
-            background-position: center;
+        /* สร้างฉากสนามหญ้าการ์ตูนด้วย CSS สดใส น่ารัก ไม่ต้องพึ่งรูปภายนอก */
+        .pure-grass-map {
+            background: linear-gradient(to bottom, #7dd3fc 0%, #bae6fd 60%, #86efac 60%, #4ade80 100%);
             position: relative;
+            overflow: hidden;
         }
 
-        /* ป้ายตัวเลขทรงการ์ตูนสดใส ป๊อปอัพนุ่มนวล */
+        /* เนินหญ้าการ์ตูนยิ้มแย้ม */
+        .hill-1 {
+            position: absolute;
+            bottom: -50px;
+            left: -10%;
+            width: 70%;
+            height: 200px;
+            background: #22c55e;
+            border-radius: 50%;
+        }
+        .hill-2 {
+            position: absolute;
+            bottom: -70px;
+            right: -10%;
+            width: 70%;
+            height: 220px;
+            background: #16a34a;
+            border-radius: 50%;
+        }
+
+        /* เมฆการ์ตูนดุ๊กดิ๊ก */
+        .cloud {
+            position: absolute;
+            background: #ffffff;
+            border-radius: 50px;
+            opacity: 0.9;
+        }
+        .cloud::before, .cloud::after {
+            content: '';
+            position: absolute;
+            background: #ffffff;
+            border-radius: 50%;
+        }
+        .cloud-1 { width: 120px; height: 40px; top: 15%; left: 10%; }
+        .cloud-1::before { width: 50px; height: 50px; top: -20px; left: 20px; }
+        .cloud-1::after { width: 40px; height: 40px; top: -15px; left: 55px; }
+
+        .cloud-2 { width: 100px; height: 35px; top: 25%; right: 15%; }
+        .cloud-2::before { width: 40px; height: 40px; top: -15px; left: 15px; }
+        .cloud-2::after { width: 35px; height: 35px; top: -10px; left: 45px; }
+
+        /* ป้ายตัวเลขการ์ตูนลอยนุ่มนวล */
         .cute-target {
             background: linear-gradient(180deg, #fef08a 0%, #facc15 100%);
             border: 4px solid #ffffff;
@@ -75,11 +115,17 @@
             </ul>
         </div>
 
-        <!-- Main Display Map View -->
-        <div class="flex-1 grass-map rounded-3xl border-4 border-white shadow-2xl relative flex flex-col justify-start items-center overflow-hidden p-4">
+        <!-- Main Display Map View (Pure CSS Grass Scene) -->
+        <div class="flex-1 pure-grass-map rounded-3xl border-4 border-white shadow-2xl relative flex flex-col justify-start items-center overflow-hidden p-4">
             
+            <!-- Background Decorative Hills & Clouds -->
+            <div class="cloud cloud-1"></div>
+            <div class="cloud cloud-2"></div>
+            <div class="hill-1"></div>
+            <div class="hill-2"></div>
+
             <!-- Top Floating Question Box -->
-            <div class="bg-white/95 border-4 border-amber-300 rounded-3xl px-8 py-3 text-center shadow-xl z-20 flex items-center gap-6">
+            <div class="bg-white/95 border-4 border-amber-300 rounded-3xl px-8 py-3 text-center shadow-xl z-20 flex items-center gap-6 mt-2">
                 <span id="round-label" class="text-xs font-black bg-amber-400 text-white px-3 py-1 rounded-full uppercase tracking-wider shadow border border-amber-500">
                     รอเริ่มเกม
                 </span>
@@ -109,9 +155,9 @@
         let isProcessingHit = false;
 
         const roadPathPoints = [
-            { x: 15, y: 25 }, { x: 35, y: 20 }, { x: 65, y: 22 }, { x: 85, y: 28 },
-            { x: 80, y: 55 }, { x: 60, y: 50 }, { x: 38, y: 52 }, { x: 20, y: 48 },
-            { x: 18, y: 75 }, { x: 35, y: 82 }, { x: 65, y: 82 }, { x: 82, y: 75 }
+            { x: 15, y: 35 }, { x: 35, y: 30 }, { x: 65, y: 32 }, { x: 85, y: 38 },
+            { x: 80, y: 65 }, { x: 60, y: 60 }, { x: 38, y: 62 }, { x: 20, y: 58 },
+            { x: 18, y: 80 }, { x: 35, y: 85 }, { x: 65, y: 85 }, { x: 82, y: 80 }
         ];
 
         const playerUrl = "https://newlifespc-a11y.github.io/multiplayer-math-game/find-number/player.html";
@@ -184,7 +230,7 @@
             container.innerHTML = keys.map((id) => {
                 const p = playersData[id];
                 const x = p.x !== undefined ? p.x : 15;
-                const y = p.y !== undefined ? p.y : 25;
+                const y = p.y !== undefined ? p.y : 35;
 
                 return `
                 <div class="absolute transition-all duration-75 ease-out flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2 z-20" 
