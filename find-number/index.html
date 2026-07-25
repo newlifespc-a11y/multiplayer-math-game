@@ -28,7 +28,6 @@
             <p class="text-xs text-slate-400">สแกน QR Code บนมือถือเพื่อเข้าร่วมการแข่งขัน!</p>
         </div>
         <div class="flex items-center space-x-3">
-            <!-- 🟢 เพิ่มปุ่มเริ่มเกม และ ปุ่มรีเซ็ต กลับมาสมบูรณ์ -->
             <button onclick="startGame()" class="bg-emerald-500 hover:bg-emerald-600 active:scale-95 px-5 py-2.5 rounded-xl font-black text-slate-900 shadow-lg transition text-sm">
                 ▶️ เริ่มเกม / สุ่มโจทย์ใหม่
             </button>
@@ -41,7 +40,7 @@
     <!-- Main Content Grid -->
     <div class="flex-1 flex flex-col md:flex-row p-4 gap-4 h-[calc(100vh-80px)]">
         
-        <!-- Sidebar: QR Code & Player List -->
+        <!-- Sidebar -->
         <div class="w-full md:w-80 bg-slate-800 p-4 rounded-2xl border-2 border-slate-700 flex flex-col items-center shadow-xl">
             <h2 class="text-base font-bold mb-2 text-center text-cyan-400">สแกนเพื่อเล่นเกม</h2>
             <div id="qrcode" class="bg-white p-3 rounded-xl shadow-md mb-4 border-2 border-yellow-400"></div>
@@ -55,16 +54,14 @@
             </ul>
         </div>
 
-        <!-- Main Arena Display -->
+        <!-- Main Arena -->
         <div class="flex-1 bg-slate-800 p-2 rounded-2xl border-2 border-slate-700 flex flex-col relative overflow-hidden shadow-xl">
             
-            <!-- โจทย์คณิตศาสตร์ฝั่ง Host -->
             <div id="host-question-box" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-20 bg-slate-900/90 border-2 border-cyan-400 px-8 py-2 rounded-2xl shadow-2xl text-center backdrop-blur">
                 <div class="text-[10px] text-cyan-300 font-bold uppercase tracking-wider">โจทย์ประจำข้อ</div>
                 <div id="host-question-text" class="text-3xl font-black text-yellow-300">กดเริ่มเกมเพื่อแสดงโจทย์</div>
             </div>
 
-            <!-- ลานประลองสีเขียวสดใส -->
             <div id="arena-viewport" class="w-full h-full rounded-xl grass-arena relative overflow-hidden border-4 border-yellow-500/50">
                 <div id="answers-layer"></div>
                 <div id="players-layer"></div>
@@ -81,7 +78,16 @@
         const db = firebase.database();
 
         let playersData = {};
+        let currentQuestionData = null;
         const colors = ['#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4'];
+
+        // พิกัดของตัวเลือกคำตอบ % (ตรงกับ 4 มุม)
+        const answerCoords = [
+            { x: 38, y: 36 }, // บนซ้าย
+            { x: 84, y: 36 }, // บนขวา
+            { x: 38, y: 80 }, // ล่างซ้าย
+            { x: 84, y: 80 }  // ล่างขวา
+        ];
 
         // สร้าง QR Code
         const playerUrl = "https://newlifespc-a11y.github.io/multiplayer-math-game/find-number/player.html";
@@ -97,13 +103,14 @@
             playersData = snapshot.val() || {};
             renderArena();
             updateJoinList();
+            checkCollisions(); // ตรวจสอบการชนคำตอบ
         });
 
         db.ref('gameState/currentQuestion').on('value', (snapshot) => {
-            const q = snapshot.val();
-            if(q) {
-                document.getElementById('host-question-text').innerText = `${q.n1} + ${q.n2} = ?`;
-                renderAnswers(q.options);
+            currentQuestionData = snapshot.val();
+            if(currentQuestionData) {
+                document.getElementById('host-question-text').innerText = `${currentQuestionData.n1} + ${currentQuestionData.n2} = ?`;
+                renderAnswers(currentQuestionData.options);
             }
         });
 
@@ -143,7 +150,7 @@
                 const y = p.y !== undefined ? p.y : 50;
 
                 return `
-                <div class="absolute transition-all duration-100 ease-out flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2" 
+                <div class="absolute transition-all duration-75 ease-out flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2 z-10" 
                      style="left: ${x}%; top: ${y}%;">
                     <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg border-2 border-white ring-2 ring-black/20" 
                          style="background-color: ${color}">
@@ -159,17 +166,48 @@
         function renderAnswers(options) {
             const layer = document.getElementById('answers-layer');
             if(!options) return;
-            const coords = [
-                { x: 20, y: 25 }, { x: 80, y: 25 },
-                { x: 20, y: 75 }, { x: 80, y: 75 }
-            ];
 
             layer.innerHTML = options.map((val, idx) => `
-                <div class="absolute bg-white text-slate-900 border-4 border-yellow-400 font-black text-2xl w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl transform -translate-x-1/2 -translate-y-1/2"
-                     style="left: ${coords[idx].x}%; top: ${coords[idx].y}%;">
+                <div class="absolute bg-white text-slate-900 border-4 border-yellow-400 font-black text-2xl w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl transform -translate-x-1/2 -translate-y-1/2 z-0"
+                     style="left: ${answerCoords[idx].x}%; top: ${answerCoords[idx].y}%;">
                     ${val}
                 </div>
             `).join('');
+        }
+
+        // 🎯 ระบบตรวจจับว่าตัวละครชนคำตอบถูกต้องหรือไม่
+        let isProcessingHit = false;
+        function checkCollisions() {
+            if (!currentQuestionData || isProcessingHit) return;
+
+            Object.keys(playersData).forEach(id => {
+                const p = playersData[id];
+                if (!p.x || !p.y) return;
+
+                currentQuestionData.options.forEach((val, idx) => {
+                    const box = answerCoords[idx];
+                    // วัดระยะห่างระหว่างตัวละครกับกล่องคำตอบ (ในหน่วย %)
+                    const dx = p.x - box.x;
+                    const dy = p.y - box.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    // ถ้าระยะห่างน้อยกว่า 5% ถือว่าชน!
+                    if (distance < 5) {
+                        if (val === currentQuestionData.answer) {
+                            isProcessingHit = true;
+                            // +1 คะแนนให้คนที่ตอบถูก
+                            const newScore = (p.score || 0) + 1;
+                            db.ref(`players/${id}/score`).set(newScore);
+
+                            // แจ้งเตือนสั้นๆ แล้วรีสุ่มโจทย์ใหม่
+                            setTimeout(() => {
+                                startGame();
+                                isProcessingHit = false;
+                            }, 500);
+                        }
+                    }
+                });
+            });
         }
 
         function startGame() {
