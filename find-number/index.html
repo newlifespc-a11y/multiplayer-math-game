@@ -53,7 +53,7 @@
                 </div>
             </div>
 
-            <!-- Solid Light Blue Arena Container (ไร้คำว่า ลานประลอง) -->
+            <!-- Solid Light Blue Arena Container -->
             <div id="arena-container" class="flex-1 bg-sky-200 rounded-xl relative border-4 border-sky-400 shadow-inner overflow-hidden min-h-[420px]">
                 <!-- Target Options Layer -->
                 <div id="options-layer" class="w-full h-full absolute inset-0"></div>
@@ -82,7 +82,7 @@
             playersData = snapshot.val() || {};
             renderPlayers();
             updateScoreboard();
-            checkCollisions(); // Check if any player hit the correct answer
+            checkCollisions();
         });
 
         db.ref('gameState').on('value', (snapshot) => {
@@ -97,7 +97,7 @@
             const statusEl = document.getElementById('game-status');
 
             if (currentGameState.status === 'PLAYING') {
-                qEl.innerText = currentGameState.question || "กำลังโหลดโจทย์...";
+                qEl.innerText = currentGameState.question || "กำลังดึงโจทย์...";
                 roundEl.innerText = `ข้อที่ ${currentGameState.currentRound || 1} / 5`;
                 statusEl.innerText = "สถานะ: กำลังแข่งขัน 🔥";
                 statusEl.className = "text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full";
@@ -124,16 +124,16 @@
                 return;
             }
 
-            // Sort by score descending
             const sortedKeys = keys.sort((a,b) => (playersData[b].score || 0) - (playersData[a].score || 0));
 
             listEl.innerHTML = sortedKeys.map((id, idx) => {
                 const p = playersData[id];
+                const pName = p.name || 'ผู้เล่น';
                 return `<li class="flex items-center justify-between bg-slate-700/50 p-2 rounded border border-slate-600">
                     <span class="font-medium flex items-center gap-2">
                         <span class="text-xs bg-yellow-500 text-slate-900 font-bold px-1.5 py-0.5 rounded-full">#${idx+1}</span>
                         <span class="text-base">${p.avatar || '🐯'}</span>
-                        ${p.name}
+                        ${pName}
                     </span>
                     <span class="text-xs font-bold text-yellow-400 bg-slate-800 px-2 py-1 rounded">คะแนน: ${p.score || 0}</span>
                 </li>`;
@@ -151,6 +151,7 @@
 
             container.innerHTML = keys.map((id) => {
                 const p = playersData[id];
+                const pName = p.name || 'ผู้เล่น';
                 const x = p.x !== undefined ? p.x : 50;
                 const y = p.y !== undefined ? p.y : 50;
 
@@ -161,7 +162,7 @@
                         ${p.avatar || '🐯'}
                     </div>
                     <span class="text-[9px] font-medium bg-slate-900/80 text-white px-1.5 py-0.2 rounded shadow whitespace-nowrap">
-                        ${p.name} (${p.score || 0})
+                        ${pName} (${p.score || 0})
                     </span>
                 </div>`;
             }).join('');
@@ -175,14 +176,13 @@
             }
 
             container.innerHTML = currentGameState.options.map((opt) => `
-                <div class="absolute transform -translate-x-1/2 -translate-y-1/2 bg-white/90 border-2 border-sky-600 text-slate-900 font-black text-xl rounded-2xl w-14 h-14 flex items-center justify-center shadow-lg z-10"
+                <div class="absolute transform -translate-x-1/2 -translate-y-1/2 bg-white/95 border-2 border-sky-600 text-slate-900 font-black text-xl rounded-2xl w-14 h-14 flex items-center justify-center shadow-lg z-10"
                      style="left: ${opt.x}%; top: ${opt.y}%;">
                     ${opt.val}
                 </div>
             `).join('');
         }
 
-        // Logic Check Collision between Players & Correct Option Target
         function checkCollisions() {
             if (currentGameState.status !== 'PLAYING' || !currentGameState.options) return;
 
@@ -192,10 +192,9 @@
 
             Object.keys(playersData).forEach(pId => {
                 const p = playersData[pId];
-                // Distance formula in percentage space
                 const dist = Math.hypot(p.x - targetOpt.x, p.y - targetOpt.y);
 
-                if (dist < 6) { // Touched the correct target!
+                if (dist < 6) { // วิ่งชนคำตอบถูกต้อง
                     let newScore = (p.score || 0) + 1;
                     db.ref('players/' + pId + '/score').set(newScore);
 
@@ -221,7 +220,7 @@
                 qText = `${n1} + ${n2} = ?`;
             } else if (op === '-') {
                 n1 = Math.floor(Math.random() * 10);
-                n2 = Math.floor(Math.random() * (n1 + 1)); // ห้ามติดลบ
+                n2 = Math.floor(Math.random() * (n1 + 1));
                 ans = n1 - n2;
                 qText = `${n1} - ${n2} = ?`;
             } else if (op === '*') {
@@ -229,14 +228,13 @@
                 n2 = Math.floor(Math.random() * 10);
                 ans = n1 * n2;
                 qText = `${n1} × ${n2} = ?`;
-            } else { // Division (หารลงตัว)
-                n2 = Math.floor(Math.random() * 9) + 1; // ตัวหาร 1-9
-                ans = Math.floor(Math.random() * 10);   // ผลลัพธ์ 0-9
-                n1 = n2 * ans;                          // ตัวตั้ง
+            } else {
+                n2 = Math.floor(Math.random() * 9) + 1;
+                ans = Math.floor(Math.random() * 10);
+                n1 = n2 * ans;
                 qText = `${n1} ÷ ${n2} = ?`;
             }
 
-            // Generate 5 random position choices
             let choices = [ans];
             while (choices.length < 5) {
                 let wrong = Math.floor(Math.random() * 20);
@@ -244,7 +242,6 @@
             }
             choices.sort(() => Math.random() - 0.5);
 
-            // Fixed grid areas to avoid overlap
             const positions = [
                 { x: 20, y: 20 }, { x: 80, y: 20 },
                 { x: 50, y: 50 },
@@ -267,7 +264,7 @@
         }
 
         function startGame() {
-            // Reset scores
+            // ล้างคะแนนผู้เล่นเก่าก่อนเริ่มเกมใหม่
             Object.keys(playersData).forEach(pId => {
                 db.ref('players/' + pId + '/score').set(0);
             });
