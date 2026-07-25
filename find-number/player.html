@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Math Runner - Mobile Controller</title>
+    <title>Math Runner - Controller</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -13,85 +13,66 @@
             -webkit-user-select: none;
             user-select: none;
             touch-action: manipulation;
+            overflow: hidden;
         }
-        .arena-bg {
-            background-color: #1e293b;
-            background-image: radial-gradient(#334155 1px, transparent 1px);
-            background-size: 15px 15px;
+        .arena-sky {
+            background-color: #bae6fd; /* สีฟ้าอ่อน */
+            background-image: radial-gradient(#0284c7 1px, transparent 1px);
+            background-size: 16px 16px;
+        }
+        /* Style สำหรับ วงกลม Joystick */
+        #joystick-base {
+            width: 130px;
+            height: 130px;
+            background: rgba(30, 41, 59, 0.7);
+            border: 3px solid #38bdf8;
+            border-radius: 50%;
+            position: relative;
+            touch-action: none;
+        }
+        #joystick-stick {
+            width: 50px;
+            height: 50px;
+            background: #f59e0b;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
     </style>
 </head>
-<body class="bg-slate-900 text-white min-h-screen flex flex-col font-sans">
+<body class="bg-slate-900 text-white h-screen flex flex-col font-sans">
 
-    <!-- Header Section (เหมือนหน้า index) -->
+    <!-- Header Section -->
     <header class="p-3 bg-slate-800 flex justify-between items-center border-b border-slate-700">
-        <h1 class="text-lg font-bold text-yellow-400">🏃 Math Runner</h1>
-        <span id="player-status-badge" class="bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full text-xs font-semibold">
-            รอเข้าสู่เกม
+        <h1 class="text-sm font-bold text-yellow-400">🏃 ลานประลองสีฟ้า</h1>
+        <span id="player-name-tag" class="text-xs bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full font-bold">
+            กำลังสร้างตัวละคร...
         </span>
     </header>
 
-    <!-- Screen 1: Login Screen -->
-    <div id="login-screen" class="flex-1 flex flex-col justify-center items-center p-4">
-        <div class="w-full max-w-sm bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl text-center">
-            <h2 class="text-xl font-bold text-yellow-400 mb-2">เข้าสู่สนามประลอง</h2>
-            <p class="text-xs text-slate-400 mb-6">กรอกชื่อของคุณเพื่อลงสนามแข่ง</p>
-            
-            <input type="text" id="player-name" placeholder="ใส่ชื่อของคุณที่นี่..." 
-                   class="w-full p-3 rounded-xl bg-slate-900 border border-slate-600 text-center text-white mb-4 focus:outline-none focus:border-yellow-400 font-bold">
-            
-            <button onclick="joinGame()" class="w-full bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 text-slate-900 font-bold py-3 rounded-xl shadow-lg transition">
-                เข้าสู่สนามแข่ง
-            </button>
-        </div>
-    </div>
-
-    <!-- Screen 2 & 3 Main Playing View (Layout เดียวกับ index) -->
-    <div id="main-play-area" class="hidden flex-1 flex flex-col p-3 gap-3 overflow-hidden">
+    <!-- Main View: Light Blue Arena -->
+    <div class="flex-1 p-3 flex flex-col relative overflow-hidden">
         
-        <!-- 2D Arena Display Area -->
-        <div class="bg-slate-800 p-3 rounded-xl border border-slate-700 flex flex-col flex-1 relative min-h-[200px]">
-            <div class="flex justify-between items-center mb-2">
-                <span class="text-xs font-bold text-slate-300">ลานประลองความเร็ว (ตำแหน่งจริง)</span>
-                <span class="text-xs text-yellow-400">คะแนน: <span id="my-score">0</span></span>
-            </div>
-            
-            <div id="player-arena" class="flex-1 arena-bg rounded-lg relative border border-slate-600 overflow-hidden">
-                <div id="players-layer" class="w-full h-full relative">
-                    <!-- Dynamic Players Render Here -->
-                </div>
+        <!-- Light Blue Arena Container -->
+        <div class="flex-1 arena-sky rounded-xl relative border-2 border-sky-400 overflow-hidden shadow-inner">
+            <div id="players-layer" class="w-full h-full relative">
+                <!-- Dynamic Players Render Here -->
             </div>
         </div>
 
-        <!-- Question & Controller Section -->
-        <div class="bg-slate-800 p-3 rounded-xl border border-slate-700 flex flex-col gap-3">
-            
-            <!-- Math Question Box -->
-            <div class="bg-slate-900 p-3 rounded-lg border border-slate-700 text-center">
-                <div id="question" class="text-2xl font-black text-cyan-400">รอเริ่มเกม...</div>
-            </div>
-
-            <!-- Answer Options Grid -->
-            <div id="options-container" class="grid grid-cols-2 gap-2">
-                <!-- Answer Buttons Render Here -->
-            </div>
-
-            <!-- D-Pad Control Buttons (ปุ่มบังคับทิศทาง) -->
-            <div class="mt-2 border-t border-slate-700 pt-3 flex flex-col items-center">
-                <span class="text-[11px] text-slate-400 mb-2 font-semibold">ปุ่มควบคุมการเคลื่อนที่ในสนาม</span>
-                <div class="grid grid-cols-3 gap-2 w-48 text-center">
-                    <div></div>
-                    <button onclick="movePlayer(0, -5)" class="bg-slate-700 active:bg-yellow-500 active:text-slate-900 border border-slate-500 p-3 rounded-lg font-bold text-lg shadow">⬆️</button>
-                    <div></div>
-                    <button onclick="movePlayer(-5, 0)" class="bg-slate-700 active:bg-yellow-500 active:text-slate-900 border border-slate-500 p-3 rounded-lg font-bold text-lg shadow">⬅️</button>
-                    <button onclick="movePlayer(0, 5)" class="bg-slate-700 active:bg-yellow-500 active:text-slate-900 border border-slate-500 p-3 rounded-lg font-bold text-lg shadow">⬇️</button>
-                    <button onclick="movePlayer(5, 0)" class="bg-slate-700 active:bg-yellow-500 active:text-slate-900 border border-slate-500 p-3 rounded-lg font-bold text-lg shadow">➡️</button>
-                </div>
+        <!-- Floating Circular Joystick at Bottom Right (วงกลมขวาล่าง) -->
+        <div class="absolute bottom-6 right-6 z-50 flex flex-col items-center">
+            <div id="joystick-base" class="shadow-2xl">
+                <div id="joystick-stick"></div>
             </div>
         </div>
     </div>
 
-    <!-- Firebase Script & Logic -->
+    <!-- Firebase & Joystick Logic -->
     <script>
         const firebaseConfig = {
             databaseURL: "https://multiplayer-math-game-e021c-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -101,55 +82,35 @@
         const db = firebase.database();
 
         let playerId = null;
-        let currentScore = 0;
-        let currentAnswer = 0;
-        let posX = Math.floor(Math.random() * 80) + 10; // สุ่มตำแหน่ง X เริ่มต้น (10%-90%)
-        let posY = Math.floor(Math.random() * 80) + 10; // สุ่มตำแหน่ง Y เริ่มต้น (10%-90%)
+        let myName = "Player_" + Math.floor(1000 + Math.random() * 9000);
+        let posX = Math.floor(Math.random() * 60) + 20; // Random Start Pos X (20%-80%)
+        let posY = Math.floor(Math.random() * 60) + 20; // Random Start Pos Y (20%-80%)
         let allPlayers = {};
         const colors = ['#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#10B981'];
 
-        function joinGame() {
-            const nameInput = document.getElementById('player-name').value.trim();
-            if (!nameInput) {
-                alert('กรุณากรอกชื่อก่อนเริ่มเล่นครับ');
-                return;
-            }
-
+        // Auto Join when Scanning
+        function autoCreatePlayer() {
             playerId = 'player_' + Math.random().toString(36).substr(2, 9);
             const playerRef = db.ref('players/' + playerId);
 
             playerRef.set({
-                name: nameInput,
-                score: 0,
+                name: myName,
                 x: posX,
                 y: posY
             });
 
             playerRef.onDisconnect().remove();
 
-            document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('main-play-area').classList.remove('hidden');
+            document.getElementById('player-name-tag').innerText = "คุณคือ: " + myName;
 
-            // Synchronize All Players for Local Arena Display
+            // Listen for All Players Realtime Position
             db.ref('players').on('value', (snapshot) => {
                 allPlayers = snapshot.val() || {};
-                renderLocalArena();
+                renderArena();
             });
-
-            listenToGameState();
         }
 
-        function movePlayer(dx, dy) {
-            if (!playerId) return;
-            // จำกัดขอบเขตไม่ให้ออกนอกลานประลอง (5% - 95%)
-            posX = Math.min(Math.max(posX + dx, 5), 95);
-            posY = Math.min(Math.max(posY + dy, 5), 95);
-
-            db.ref('players/' + playerId + '/x').set(posX);
-            db.ref('players/' + playerId + '/y').set(posY);
-        }
-
-        function renderLocalArena() {
+        function renderArena() {
             const container = document.getElementById('players-layer');
             const keys = Object.keys(allPlayers);
 
@@ -161,76 +122,93 @@
                 const isMe = id === playerId;
 
                 return `
-                <div class="absolute transition-all duration-200 ease-out flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2" 
+                <div class="absolute transition-all duration-75 ease-out flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2" 
                      style="left: ${x}%; top: ${y}%;">
-                    <div class="w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-md border ${isMe ? 'border-yellow-400 ring-2 ring-yellow-400 animate-pulse' : 'border-white'}" 
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md border ${isMe ? 'border-yellow-300 ring-4 ring-yellow-400/50 scale-110' : 'border-white'}" 
                          style="background-color: ${color}">
                         🏃
                     </div>
-                    <span class="text-[9px] font-bold ${isMe ? 'bg-yellow-500 text-slate-900' : 'bg-slate-900/90 text-white'} px-1 rounded whitespace-nowrap">
+                    <span class="text-[9px] font-bold ${isMe ? 'bg-yellow-400 text-slate-900' : 'bg-slate-900/80 text-white'} px-1 rounded whitespace-nowrap">
                         ${p.name}
                     </span>
                 </div>`;
             }).join('');
         }
 
-        function listenToGameState() {
-            db.ref('gameState/status').on('value', (snapshot) => {
-                const status = snapshot.val();
-                const badge = document.getElementById('player-status-badge');
-                if (status === 'PLAYING') {
-                    badge.innerText = 'กำลังแข่งขัน 🔥';
-                    badge.className = 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full text-xs font-semibold';
-                    generateQuestion();
-                } else {
-                    badge.innerText = 'รอเริ่มเกม';
-                    badge.className = 'bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full text-xs font-semibold';
-                    document.getElementById('question').innerText = 'รอโฮสต์กดเริ่มเกม...';
-                    document.getElementById('options-container').innerHTML = '';
-                }
-            });
-        }
+        // --- Circular Joystick Logic ---
+        const base = document.getElementById('joystick-base');
+        const stick = document.getElementById('joystick-stick');
+        let isDragging = false;
+        let moveInterval = null;
+        let deltaX = 0;
+        let deltaY = 0;
 
-        function generateQuestion() {
-            const num1 = Math.floor(Math.random() * 10) + 1;
-            const num2 = Math.floor(Math.random() * 10) + 1;
-            currentAnswer = num1 + num2;
+        const maxRadius = 40; // Max stick drag distance
 
-            document.getElementById('question').innerText = `${num1} + ${num2} = ?`;
-
-            let choices = [currentAnswer];
-            while (choices.length < 4) {
-                let wrong = Math.floor(Math.random() * 20) + 1;
-                if (!choices.includes(wrong)) choices.push(wrong);
-            }
-            choices.sort(() => Math.random() - 0.5);
-
-            const container = document.getElementById('options-container');
-            container.innerHTML = choices.map(choice => `
-                <button onclick="checkAnswer(${choice}, this)" 
-                        class="bg-slate-700 hover:bg-slate-600 active:bg-yellow-500 active:text-slate-900 border border-slate-500 text-xl font-bold py-3 rounded-lg shadow transition">
-                    ${choice}
-                </button>
-            `).join('');
-        }
-
-        function checkAnswer(selected, btnElement) {
-            if (selected === currentAnswer) {
-                currentScore += 1;
-                document.getElementById('my-score').innerText = currentScore;
-                db.ref('players/' + playerId + '/score').set(currentScore);
-                
-                // ก้าวกระโดดแบบสุ่มเมื่อตอบถูก
-                movePlayer((Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20);
-                
-                generateQuestion();
-            } else {
-                btnElement.classList.add('border-rose-500', 'bg-rose-800');
-                setTimeout(() => {
-                    btnElement.classList.remove('border-rose-500', 'bg-rose-800');
-                }, 200);
+        function handleStart(e) {
+            isDragging = true;
+            if (!moveInterval) {
+                moveInterval = setInterval(updatePosition, 50); // Move every 50ms
             }
         }
+
+        function handleMove(e) {
+            if (!isDragging) return;
+
+            const touch = e.touches ? e.touches[0] : e;
+            const rect = base.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+            let dx = touch.clientX - centerX;
+            let dy = touch.clientY - centerY;
+
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance > maxRadius) {
+                dx = (dx / distance) * maxRadius;
+                dy = (dy / distance) * maxRadius;
+            }
+
+            stick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+
+            // Normalized velocity vector (-1 to 1)
+            deltaX = (dx / maxRadius) * 1.5;
+            deltaY = (dy / maxRadius) * 1.5;
+        }
+
+        function handleEnd() {
+            isDragging = false;
+            stick.style.transform = `translate(-50%, -50%)`;
+            deltaX = 0;
+            deltaY = 0;
+            clearInterval(moveInterval);
+            moveInterval = null;
+        }
+
+        function updatePosition() {
+            if (deltaX === 0 && deltaY === 0) return;
+
+            posX = Math.min(Math.max(posX + deltaX, 3), 97);
+            posY = Math.min(Math.max(posY + deltaY, 3), 97);
+
+            if (playerId) {
+                db.ref('players/' + playerId + '/x').set(posX);
+                db.ref('players/' + playerId + '/y').set(posY);
+            }
+        }
+
+        // Joystick Event Listeners
+        base.addEventListener('touchstart', handleStart);
+        window.addEventListener('touchmove', handleMove);
+        window.addEventListener('touchend', handleEnd);
+
+        base.addEventListener('mousedown', handleStart);
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('mouseup', handleEnd);
+
+        // Auto initialization
+        autoCreatePlayer();
     </script>
 </body>
 </html>
