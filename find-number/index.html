@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Math Runner - Host Display</title>
-    <!-- Tailwind CSS สำหรับจัดสไตล์ -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- QRCode.js สำหรับสร้าง QR Code -->
+    <!-- QRCode.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <!-- Firebase SDK (v8) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -21,7 +21,7 @@
     <!-- Header Section -->
     <header class="p-4 bg-slate-800 flex justify-between items-center border-b border-slate-700">
         <div>
-            <h1 class="text-2xl font-bold text-yellow-400">🏃 Math Runner Grand Prix</h1>
+            <h1 class="text-2xl font-bold text-yellow-400">🐾 Math Runner Grand Prix</h1>
             <p class="text-xs text-slate-400">สแกน QR Code บนมือถือเพื่อเข้าร่วมการแข่งขัน!</p>
         </div>
         <div class="flex items-center space-x-4">
@@ -72,9 +72,8 @@
         const db = firebase.database();
 
         let playersData = {};
-        const colors = ['#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#10B981'];
+        const colors = ['#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4'];
 
-        // Generate QR Code dynamically targeting player.html (แก้ไขแล้ว)
         const playerUrl = "https://newlifespc-a11y.github.io/multiplayer-math-game/find-number/player.html";
         new QRCode(document.getElementById("qrcode"), {
             text: playerUrl,
@@ -82,7 +81,6 @@
             height: 140
         });
 
-        // Listen for Realtime Player Updates
         db.ref('players').on('value', (snapshot) => {
             playersData = snapshot.val() || {};
             renderTracks();
@@ -103,9 +101,10 @@
             listEl.innerHTML = keys.map((id, index) => {
                 const p = playersData[id];
                 const color = colors[index % colors.length];
+                const animal = p.animal || '🐶';
                 return `<li class="flex items-center justify-between bg-slate-700/50 p-2 rounded border border-slate-600">
                     <span class="font-medium flex items-center gap-2">
-                        <span class="w-3 h-3 rounded-full" style="background-color: ${color}"></span>
+                        <span class="text-lg">${animal}</span>
                         ${p.name}
                     </span>
                     <span class="text-xs bg-slate-800 px-2 py-1 rounded text-slate-300">คะแนน: ${p.score || 0}</span>
@@ -126,15 +125,15 @@
                 const p = playersData[id];
                 const color = colors[index % colors.length];
                 const score = p.score || 0;
-                // Maximum 10 points to reach the finish line (85% width)
+                const animal = p.animal || '🐶';
                 const positionPercent = Math.min((score / 10) * 85, 85);
 
                 return `
                 <div class="relative w-full h-12 bg-slate-800/80 rounded-lg border border-slate-600 flex items-center px-2">
                     <div class="absolute left-0 top-0 bottom-0 bg-slate-700/30 rounded-lg" style="width: ${positionPercent + 5}%"></div>
                     <div class="absolute transition-all duration-500 ease-out flex items-center gap-2" style="left: ${positionPercent}%">
-                        <div class="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md" style="background-color: ${color}">
-                            🏃
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-2xl shadow-md border-2" style="border-color: ${color}">
+                            ${animal}
                         </div>
                         <span class="text-xs font-bold bg-slate-900/90 text-white px-2 py-0.5 rounded shadow border border-slate-700 whitespace-nowrap">
                             ${p.name} (${score})
