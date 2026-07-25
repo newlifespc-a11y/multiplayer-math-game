@@ -3,55 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Math Runner - 3D Path Fantasy</title>
+    <title>Math Runner - Bright Cute Fantasy</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        .fantasy-map {
-            background-image: url('https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1920&auto=format&fit=crop');
+        /* Bright Cartoon Nature Background */
+        .bright-map {
+            background-image: url('https://img.freepik.com/free-vector/cartoon-landscape-with-green-hills-and-cloudy-sky_107791-8848.jpg');
             background-size: cover;
             background-position: center;
             position: relative;
-            box-shadow: inset 0 0 100px rgba(0,0,0,0.8);
-        }
-        
-        .neon-box {
-            box-shadow: 0 0 20px rgba(56, 189, 248, 0.6), inset 0 0 10px rgba(56, 189, 248, 0.3);
-            border: 2px solid #38bdf8;
         }
 
-        .neon-target {
-            box-shadow: 0 0 25px rgba(250, 204, 21, 0.9), 0 0 10px rgba(255, 255, 255, 0.8);
-            animation: pulse-glow 1.5s infinite alternate;
+        /* Cute Target Badge */
+        .cute-target {
+            background: linear-gradient(180deg, #fef08a 0%, #facc15 100%);
+            border: 4px solid #ffffff;
+            box-shadow: 0 8px 0px #ca8a04, 0 12px 20px rgba(0,0,0,0.25);
+            animation: bounce-gentle 1.2s infinite alternate ease-in-out;
         }
 
-        @keyframes pulse-glow {
-            0% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 15px rgba(250, 204, 21, 0.7); }
-            100% { transform: translate(-50%, -50%) scale(1.15); box-shadow: 0 0 30px rgba(250, 204, 21, 1); }
+        @keyframes bounce-gentle {
+            0% { transform: translate(-50%, -50%) translateY(0px) scale(1); }
+            100% { transform: translate(-50%, -50%) translateY(-8px) scale(1.05); }
         }
     </style>
 </head>
-<body class="bg-slate-950 text-white h-screen flex flex-col font-sans select-none overflow-hidden">
+<body class="bg-sky-100 text-slate-800 h-screen flex flex-col font-sans select-none overflow-hidden">
 
-    <!-- Header Section -->
-    <header class="px-6 py-3 bg-slate-900/90 border-b border-cyan-500/30 flex justify-between items-center backdrop-blur z-30">
+    <!-- Bright Header Section -->
+    <header class="px-6 py-3 bg-white/90 border-b-4 border-sky-300 flex justify-between items-center shadow-md z-30">
         <div class="flex items-center gap-3">
-            <span class="text-3xl">🌌</span>
+            <span class="text-4xl">🌈</span>
             <div>
-                <h1 class="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-yellow-300">
-                    MATH RUNNER: 3D PATH FANTASY
+                <h1 class="text-2xl font-black text-sky-600 tracking-wide drop-shadow-sm">
+                    MATH RUNNER : วิ่งผจญภัยหารายได้
                 </h1>
-                <p class="text-xs text-slate-400">วิ่งผจญภัยไปตามทางเดินเพื่อหาคำตอบที่ถูกต้อง!</p>
+                <p class="text-xs font-bold text-slate-500">บังคับตัวละครวิ่งไปหาคำตอบที่ถูกต้องกันเลย!</p>
             </div>
         </div>
         <div class="flex items-center gap-3">
-            <button onclick="startGame()" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 px-6 py-2 rounded-xl font-black text-white shadow-lg shadow-emerald-900/50 transition transform hover:scale-105 active:scale-95 text-sm">
-                ▶ เริ่มเกม
+            <button onclick="startGame()" class="bg-gradient-to-b from-emerald-400 to-green-500 hover:from-emerald-300 hover:to-green-400 text-white border-b-4 border-green-700 active:border-b-0 px-6 py-2 rounded-2xl font-black shadow-lg transition transform hover:scale-105 active:scale-95 text-base flex items-center gap-2">
+                <span>▶</span> เริ่มเกม
             </button>
-            <button onclick="resetGame()" class="bg-gradient-to-r from-rose-600 to-red-700 hover:from-rose-500 hover:to-red-600 px-4 py-2 rounded-xl font-bold text-white shadow-lg transition text-sm">
-                🔄 รีเซ็ต
+            <button onclick="resetGame()" class="bg-gradient-to-b from-rose-400 to-red-500 hover:from-rose-300 hover:to-red-400 text-white border-b-4 border-red-700 active:border-b-0 px-4 py-2 rounded-2xl font-black shadow-lg transition text-base flex items-center gap-1">
+                <span>🔄</span> รีเซ็ต
             </button>
         </div>
     </header>
@@ -59,37 +57,34 @@
     <div class="flex-1 flex p-4 gap-4 overflow-hidden relative">
         
         <!-- Sidebar Scoreboard + QR Code -->
-        <div class="w-64 bg-slate-900/85 backdrop-blur-md p-4 rounded-2xl border border-slate-700/80 flex flex-col items-center shadow-2xl z-20">
+        <div class="w-64 bg-white/90 backdrop-blur-md p-4 rounded-3xl border-4 border-sky-200 flex flex-col items-center shadow-xl z-20">
             
             <!-- QR Code Section at Top Left -->
-            <div class="bg-slate-950 p-3 rounded-xl border border-cyan-500/40 shadow-lg flex flex-col items-center mb-4 w-full">
-                <div id="qrcode" class="bg-white p-2 rounded-lg shadow-inner"></div>
-                <span class="text-[10px] font-bold text-cyan-300 mt-2 uppercase tracking-wider text-center">📱 สแกน QR Code เพื่อเข้าร่วม</span>
+            <div class="bg-sky-50 p-3 rounded-2xl border-2 border-sky-300 shadow-inner flex flex-col items-center mb-3 w-full">
+                <div id="qrcode" class="bg-white p-2 rounded-xl shadow-md border border-slate-200"></div>
+                <span class="text-xs font-black text-sky-700 mt-2 uppercase tracking-wider text-center">📱 สแกน QR Code เข้าเล่น</span>
             </div>
 
             <!-- Scoreboard Section -->
-            <h3 class="font-black text-cyan-400 border-b border-slate-700 pb-2 mb-3 flex justify-between items-center text-sm w-full">
-                <span>🏆 อันดับผู้เล่น</span>
-                <span id="player-count" class="bg-cyan-500/20 text-cyan-300 text-xs px-2 py-0.5 rounded-full border border-cyan-500/30">0 คน</span>
+            <h3 class="font-black text-sky-800 border-b-2 border-sky-100 pb-2 mb-2 flex justify-between items-center text-sm w-full">
+                <span>🏆 อันดับคะแนน</span>
+                <span id="player-count" class="bg-sky-200 text-sky-800 text-xs px-2.5 py-0.5 rounded-full font-bold">0 คน</span>
             </h3>
             <ul id="player-join-list" class="w-full flex-1 overflow-y-auto space-y-2 text-xs">
-                <li class="text-slate-500 text-center italic py-4">รอผู้เล่นสแกน...</li>
+                <li class="text-slate-400 text-center italic py-4 font-bold">รอเด็กๆ สแกน QR Code...</li>
             </ul>
         </div>
 
         <!-- Main Display Map View -->
-        <div class="flex-1 fantasy-map rounded-2xl border-2 border-cyan-500/40 relative flex flex-col justify-start items-center overflow-hidden p-4">
+        <div class="flex-1 bright-map rounded-3xl border-4 border-white shadow-2xl relative flex flex-col justify-start items-center overflow-hidden p-4">
             
-            <!-- Dark Overlay for Readability -->
-            <div class="absolute inset-0 bg-slate-950/30 pointer-events-none z-0"></div>
-
             <!-- Top Floating Question Box -->
-            <div class="bg-slate-900/90 border-2 border-cyan-400/80 rounded-2xl px-8 py-3 text-center shadow-2xl backdrop-blur-md z-20 neon-box flex items-center gap-6">
-                <span id="round-label" class="text-xs font-black bg-yellow-400 text-slate-950 px-3 py-1 rounded-full uppercase tracking-wider shadow">
+            <div class="bg-white/95 border-4 border-amber-300 rounded-3xl px-8 py-3 text-center shadow-xl z-20 flex items-center gap-6">
+                <span id="round-label" class="text-xs font-black bg-amber-400 text-white px-3 py-1 rounded-full uppercase tracking-wider shadow border border-amber-500">
                     รอเริ่มเกม
                 </span>
-                <div id="question-text" class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-amber-200 to-white tracking-widest">
-                    กด "เริ่มเกม" เพื่อเริ่มสุ่มโจทย์
+                <div id="question-text" class="text-3xl font-black text-slate-800 tracking-wider">
+                    กด "เริ่มเกม" ด้านบนเพื่อเริ่มแข่งขัน!
                 </div>
             </div>
 
@@ -113,7 +108,6 @@
         let currentGameState = {};
         let isProcessingHit = false;
 
-        // พิกัดจุดกระจายบนเส้นทางเดินตามฉาก
         const roadPathPoints = [
             { x: 15, y: 25 }, { x: 35, y: 20 }, { x: 65, y: 22 }, { x: 85, y: 28 },
             { x: 80, y: 55 }, { x: 60, y: 50 }, { x: 38, y: 52 }, { x: 20, y: 48 },
@@ -121,7 +115,7 @@
         ];
 
         const playerUrl = "https://newlifespc-a11y.github.io/multiplayer-math-game/find-number/player.html";
-        new QRCode(document.getElementById("qrcode"), { text: playerUrl, width: 120, height: 120 });
+        new QRCode(document.getElementById("qrcode"), { text: playerUrl, width: 125, height: 125 });
 
         db.ref('players').on('value', (snapshot) => {
             playersData = snapshot.val() || {};
@@ -144,7 +138,7 @@
                 qEl.innerText = currentGameState.question || "กำลังดึงโจทย์...";
                 roundEl.innerText = `ข้อที่ ${currentGameState.currentRound || 1} / 5`;
             } else if (currentGameState.status === 'FINISHED') {
-                qEl.innerText = "🏆 จบการแข่งขันแล้ว!";
+                qEl.innerText = "🎉 จบการแข่งขันแล้ว เก่งมากๆ ครับ!";
                 roundEl.innerText = "จบเกม";
             } else {
                 qEl.innerText = 'กด "เริ่มเกม" เพื่อเริ่มสุ่มโจทย์';
@@ -159,7 +153,7 @@
             countEl.innerText = `${keys.length} คน`;
 
             if (keys.length === 0) {
-                listEl.innerHTML = '<li class="text-slate-500 text-center italic py-4">รอผู้เล่นสแกน...</li>';
+                listEl.innerHTML = '<li class="text-slate-400 text-center italic py-4 font-bold">รอเด็กๆ สแกน...</li>';
                 return;
             }
 
@@ -167,13 +161,13 @@
 
             listEl.innerHTML = sortedKeys.map((id, idx) => {
                 const p = playersData[id];
-                return `<li class="flex items-center justify-between bg-slate-800/80 p-2 rounded-xl border border-slate-700">
-                    <span class="font-bold flex items-center gap-2 text-slate-200">
-                        <span class="text-[10px] bg-amber-400 text-slate-950 font-black px-1.5 py-0.5 rounded-full">#${idx+1}</span>
-                        <span class="text-base">${p.avatar || '🐯'}</span>
-                        <span class="truncate max-w-[90px]">${p.name || 'ผู้เล่น'}</span>
+                return `<li class="flex items-center justify-between bg-sky-50 p-2 rounded-2xl border border-sky-200 shadow-sm">
+                    <span class="font-bold flex items-center gap-2 text-slate-700">
+                        <span class="text-[10px] bg-amber-400 text-white font-black px-2 py-0.5 rounded-full border border-amber-500">#${idx+1}</span>
+                        <span class="text-xl">${p.avatar || '🐯'}</span>
+                        <span class="truncate max-w-[85px] font-black">${p.name || 'ผู้เล่น'}</span>
                     </span>
-                    <span class="text-xs font-black text-amber-300 bg-slate-900 px-2 py-1 rounded-lg border border-amber-400/20">${p.score || 0} p</span>
+                    <span class="text-xs font-black text-amber-600 bg-amber-100 px-2.5 py-1 rounded-xl border border-amber-300">${p.score || 0} คะแนน</span>
                 </li>`;
             }).join('');
         }
@@ -195,10 +189,10 @@
                 return `
                 <div class="absolute transition-all duration-75 ease-out flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2 z-20" 
                      style="left: ${x}%; top: ${y}%;">
-                    <div class="text-3xl filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.9)]">
+                    <div class="text-4xl filter drop-shadow-[0_6px_6px_rgba(0,0,0,0.3)]">
                         ${p.avatar || '🐯'}
                     </div>
-                    <span class="text-[9px] font-bold bg-slate-900/90 text-cyan-300 px-2 py-0.5 rounded-full border border-cyan-400/50 shadow-lg whitespace-nowrap">
+                    <span class="text-[10px] font-black bg-white/90 text-sky-800 px-2.5 py-0.5 rounded-full border-2 border-sky-300 shadow-md whitespace-nowrap">
                         ${p.name || 'ผู้เล่น'}
                     </span>
                 </div>`;
@@ -213,7 +207,7 @@
             }
 
             container.innerHTML = currentGameState.options.map((opt) => `
-                <div class="absolute transform neon-target bg-gradient-to-b from-amber-300 to-yellow-500 border-2 border-white text-slate-950 font-black text-lg rounded-2xl w-12 h-12 flex items-center justify-center shadow-2xl z-10"
+                <div class="absolute transform cute-target text-slate-800 font-black text-2xl rounded-2xl w-14 h-14 flex items-center justify-center z-10"
                      style="left: ${opt.x}%; top: ${opt.y}%;">
                     ${opt.val}
                 </div>
