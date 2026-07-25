@@ -100,13 +100,6 @@
         const avatars = ['🐹', '🦊', '🐱', '🐶', '🦁', '🐸'];
         const colors = ['#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4'];
 
-        const answerCoords = [
-            { x: 38, y: 36 },
-            { x: 84, y: 36 },
-            { x: 38, y: 80 },
-            { x: 84, y: 80 }
-        ];
-
         function joinGame() {
             const name = document.getElementById('player-name').value.trim();
             if(!name) { alert('กรุณาใส่ชื่อก่อนครับ'); return; }
@@ -131,19 +124,20 @@
 
                 db.ref('players/' + playerId).onDisconnect().remove();
 
-                // ฟังความเคลื่อนไหว
                 listenGameState();
                 listenPlayers();
             }).catch(err => alert("เกิดข้อผิดพลาดในการเชื่อมต่อ: " + err.message));
         }
 
-        // ดึงโจทย์และตัวเลือก 4 ข้อลงมือถือ
         function listenGameState() {
             db.ref('gameState/currentQuestion').on('value', (snapshot) => {
                 const q = snapshot.val();
                 if(q) {
                     document.getElementById('question-text').innerText = `${q.n1} + ${q.n2} = ?`;
                     renderAnswersOnMobile(q.options);
+                } else {
+                    document.getElementById('question-text').innerText = "รอโจทย์จากโฮสต์...";
+                    document.getElementById('answers-layer').innerHTML = "";
                 }
             });
         }
@@ -152,20 +146,25 @@
             const layer = document.getElementById('answers-layer');
             if(!options) return;
 
-            layer.innerHTML = options.map((val, idx) => `
-                <div class="absolute bg-white text-slate-900 border-4 border-yellow-400 font-black text-2xl w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl transform -translate-x-1/2 -translate-y-1/2 z-0"
-                     style="left: ${answerCoords[idx].x * 10}px; top: ${answerCoords[idx].y * 10}px;">
-                    ${val}
+            layer.innerHTML = options.map((opt) => `
+                <div class="absolute bg-white text-slate-900 border-4 border-yellow-400 font-black text-2xl w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl transform -translate-x-1/2 -translate-y-1/2 z-0 transition-all duration-300"
+                     style="left: ${opt.x * 10}px; top: ${opt.y * 10}px;">
+                    ${opt.val}
                 </div>
             `).join('');
         }
 
-        // ดึงผู้เล่นและอัปเดตคะแนนตัวเอง
         function listenPlayers() {
             db.ref('players').on('value', (snapshot) => {
                 const players = snapshot.val() || {};
                 const container = document.getElementById('players-layer');
                 const keys = Object.keys(players);
+
+                // หากถูก Host กดรีเซ็ตระบบ ให้กลับไปหน้าใส่ชื่อ
+                if (playerId && !players[playerId]) {
+                    location.reload();
+                    return;
+                }
 
                 if (players[playerId]) {
                     document.getElementById('my-score').innerText = players[playerId].score || 0;
@@ -193,7 +192,6 @@
             });
         }
 
-        // ให้กล้องแพนตามผู้เล่น
         function updateCamera() {
             const arena = document.getElementById('game-arena');
             const vw = window.innerWidth;
