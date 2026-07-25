@@ -73,12 +73,11 @@
 
         let playersData = {};
         let currentGameState = {};
-        let isProcessingHit = false; // Flag ป้องกันการชนซ้ำรวดเดียว
+        let isProcessingHit = false;
 
         const playerUrl = "https://newlifespc-a11y.github.io/multiplayer-math-game/find-number/player.html";
         new QRCode(document.getElementById("qrcode"), { text: playerUrl, width: 140, height: 140 });
 
-        // Listen for Realtime Players & Game State
         db.ref('players').on('value', (snapshot) => {
             playersData = snapshot.val() || {};
             renderPlayers();
@@ -160,16 +159,17 @@
                 return `
                 <div class="absolute transition-all duration-75 ease-out flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2 z-20" 
                      style="left: ${x}%; top: ${y}%;">
-                    <div class="text-3xl filter drop-shadow-md">
+                    <div class="text-2xl filter drop-shadow-md">
                         ${p.avatar || '🐯'}
                     </div>
-                    <span class="text-[9px] font-medium bg-slate-900/80 text-white px-1.5 py-0.2 rounded shadow whitespace-nowrap">
+                    <span class="text-[8px] font-medium bg-slate-900/80 text-white px-1.5 py-0.2 rounded shadow whitespace-nowrap">
                         ${pName} (${p.score || 0})
                     </span>
                 </div>`;
             }).join('');
         }
 
+        // ปรับขนาดป้ายให้เล็กลง (w-10 h-10, text-base)
         function renderOptions() {
             const container = document.getElementById('options-layer');
             if (currentGameState.status !== 'PLAYING' || !currentGameState.options) {
@@ -178,7 +178,7 @@
             }
 
             container.innerHTML = currentGameState.options.map((opt) => `
-                <div class="absolute transform -translate-x-1/2 -translate-y-1/2 bg-white/95 border-2 border-sky-600 text-slate-900 font-black text-xl rounded-2xl w-14 h-14 flex items-center justify-center shadow-lg z-10"
+                <div class="absolute transform -translate-x-1/2 -translate-y-1/2 bg-white/95 border-2 border-sky-600 text-slate-900 font-black text-base rounded-xl w-10 h-10 flex items-center justify-center shadow-md z-10"
                      style="left: ${opt.x}%; top: ${opt.y}%;">
                     ${opt.val}
                 </div>
@@ -197,8 +197,8 @@
                 const p = playersData[pId];
                 const dist = Math.hypot(p.x - targetOpt.x, p.y - targetOpt.y);
 
-                if (dist < 6) { 
-                    isProcessingHit = true; // ล็อคไม่ให้ประมวลผลซ้ำ
+                if (dist < 5) { // ปรับระยะการชนให้กระชับขึ้นตามขนาดป้ายที่ลดลง
+                    isProcessingHit = true;
                     let newScore = (p.score || 0) + 1;
                     
                     db.ref('players/' + pId + '/score').set(newScore);
@@ -213,10 +213,31 @@
                         setTimeout(() => {
                             generateNextQuestion(nextRound);
                             isProcessingHit = false;
-                        }, 300); // เว้นจังหวะ 0.3 วินาทีก่อนเปลี่ยนข้อ
+                        }, 300);
                     }
                 }
             });
+        }
+
+        // ฟังก์ชันสุ่มตำแหน่งแบบกระจายตัว ไม่ให้ทับซ้อนกัน
+        function generateRandomPositions(count) {
+            let positions = [];
+            let attempts = 0;
+
+            while (positions.length < count && attempts < 200) {
+                attempts++;
+                // สุ่มพิกัดให้อยู่ในขอบเขต 12% - 88% ของสนาม
+                let newX = Math.floor(Math.random() * 76) + 12;
+                let newY = Math.floor(Math.random() * 76) + 12;
+
+                // ตรวจสอบว่าห่างจากป้ายอื่นอย่างน้อย 15%
+                let isOverlap = positions.some(pos => Math.hypot(pos.x - newX, pos.y - newY) < 15);
+
+                if (!isOverlap) {
+                    positions.push({ x: newX, y: newY });
+                }
+            }
+            return positions;
         }
 
         function generateNextQuestion(roundNum) {
@@ -253,16 +274,13 @@
             }
             choices.sort(() => Math.random() - 0.5);
 
-            const positions = [
-                { x: 20, y: 20 }, { x: 80, y: 20 },
-                { x: 50, y: 50 },
-                { x: 20, y: 80 }, { x: 80, y: 80 }
-            ].sort(() => Math.random() - 0.5);
+            // สร้างพิกัดแบบสุ่มกระจายทั่วสนาม ไม่ซ้ำตำแหน่งเดิม
+            const randomPositions = generateRandomPositions(5);
 
             const optionsData = choices.map((val, idx) => ({
                 val: val,
-                x: positions[idx].x,
-                y: positions[idx].y
+                x: randomPositions[idx].x,
+                y: randomPositions[idx].y
             }));
 
             db.ref('gameState').set({
@@ -276,7 +294,6 @@
 
         function startGame() {
             isProcessingHit = false;
-            // รีเซ็ตคะแนนผู้เล่นทุกคนเป็น 0
             Object.keys(playersData).forEach(pId => {
                 db.ref('players/' + pId + '/score').set(0);
             });
