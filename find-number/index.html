@@ -81,14 +81,6 @@
         let currentQuestionData = null;
         const colors = ['#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4'];
 
-        // พิกัดของตัวเลือกคำตอบ % (ตรงกับ 4 มุม)
-        const answerCoords = [
-            { x: 38, y: 36 }, // บนซ้าย
-            { x: 84, y: 36 }, // บนขวา
-            { x: 38, y: 80 }, // ล่างซ้าย
-            { x: 84, y: 80 }  // ล่างขวา
-        ];
-
         // สร้าง QR Code
         const playerUrl = "https://newlifespc-a11y.github.io/multiplayer-math-game/find-number/player.html";
         document.getElementById("qrcode").innerHTML = "";
@@ -103,7 +95,7 @@
             playersData = snapshot.val() || {};
             renderArena();
             updateJoinList();
-            checkCollisions(); // ตรวจสอบการชนคำตอบ
+            checkCollisions();
         });
 
         db.ref('gameState/currentQuestion').on('value', (snapshot) => {
@@ -111,6 +103,9 @@
             if(currentQuestionData) {
                 document.getElementById('host-question-text').innerText = `${currentQuestionData.n1} + ${currentQuestionData.n2} = ?`;
                 renderAnswers(currentQuestionData.options);
+            } else {
+                document.getElementById('host-question-text').innerText = "กดเริ่มเกมเพื่อแสดงโจทย์";
+                document.getElementById('answers-layer').innerHTML = "";
             }
         });
 
@@ -167,10 +162,10 @@
             const layer = document.getElementById('answers-layer');
             if(!options) return;
 
-            layer.innerHTML = options.map((val, idx) => `
-                <div class="absolute bg-white text-slate-900 border-4 border-yellow-400 font-black text-2xl w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl transform -translate-x-1/2 -translate-y-1/2 z-0"
-                     style="left: ${answerCoords[idx].x}%; top: ${answerCoords[idx].y}%;">
-                    ${val}
+            layer.innerHTML = options.map((opt) => `
+                <div class="absolute bg-white text-slate-900 border-4 border-yellow-400 font-black text-2xl w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl transform -translate-x-1/2 -translate-y-1/2 z-0 transition-all duration-300"
+                     style="left: ${opt.x}%; top: ${opt.y}%;">
+                    ${opt.val}
                 </div>
             `).join('');
         }
@@ -184,57 +179,71 @@
                 const p = playersData[id];
                 if (!p.x || !p.y) return;
 
-                currentQuestionData.options.forEach((val, idx) => {
-                    const box = answerCoords[idx];
-                    // วัดระยะห่างระหว่างตัวละครกับกล่องคำตอบ (ในหน่วย %)
-                    const dx = p.x - box.x;
-                    const dy = p.y - box.y;
+                currentQuestionData.options.forEach((opt) => {
+                    const dx = p.x - opt.x;
+                    const dy = p.y - opt.y;
                     const distance = Math.sqrt(dx * dx + dy * dy);
 
-                    // ถ้าระยะห่างน้อยกว่า 5% ถือว่าชน!
-                    if (distance < 5) {
-                        if (val === currentQuestionData.answer) {
+                    // ถ้าระยะห่างน้อยกว่า 6% ถือว่าชน
+                    if (distance < 6) {
+                        if (opt.val === currentQuestionData.answer) {
                             isProcessingHit = true;
-                            // +1 คะแนนให้คนที่ตอบถูก
                             const newScore = (p.score || 0) + 1;
                             db.ref(`players/${id}/score`).set(newScore);
 
-                            // แจ้งเตือนสั้นๆ แล้วรีสุ่มโจทย์ใหม่
                             setTimeout(() => {
                                 startGame();
                                 isProcessingHit = false;
-                            }, 500);
+                            }, 400);
                         }
                     }
                 });
             });
         }
 
+        // 🎲 สุ่มสร้างโจทย์พร้อมตำแหน่งสุ่มตาม 4 โซน
         function startGame() {
             const n1 = Math.floor(Math.random() * 10) + 1;
             const n2 = Math.floor(Math.random() * 10) + 1;
             const ans = n1 + n2;
-            let options = [ans];
-            while (options.length < 4) {
+            let wrongVals = [];
+            while (wrongVals.length < 3) {
                 let wrong = Math.floor(Math.random() * 20) + 1;
-                if (!options.includes(wrong)) options.push(wrong);
+                if (wrong !== ans && !wrongVals.includes(wrong)) wrongVals.push(wrong);
             }
-            options.sort(() => Math.random() - 0.5);
+
+            const allVals = [ans, ...wrongVals];
+            allVals.sort(() => Math.random() - 0.5);
+
+            // แบ่งพื้นที่เป็น 4 โซน และสุ่มพิกัดภายในโซนนั้นๆ (เพื่อไม่ให้ทับกันและกระจัดกระจายแบบสุ่ม)
+            const zones = [
+                { minX: 18, maxX: 38, minY: 28, maxY: 42 }, // โซน 1: บนซ้าย
+                { minX: 62, maxX: 82, minY: 28, maxY: 42 }, // โซน 2: บนขวา
+                { minX: 18, maxX: 38, minY: 65, maxY: 82 }, // โซน 3: ล่างซ้าย
+                { minX: 62, maxX: 82, minY: 65, maxY: 82 }  // โซน 4: ล่างขวา
+            ];
+            zones.sort(() => Math.random() - 0.5); // สุ่มการสลับโซนของแต่ละคำตอบ
+
+            const optionsWithCoords = allVals.map((val, idx) => {
+                const z = zones[idx];
+                const randX = Math.floor(Math.random() * (z.maxX - z.minX + 1)) + z.minX;
+                const randY = Math.floor(Math.random() * (z.maxY - z.minY + 1)) + z.minY;
+                return { val: val, x: randX, y: randY };
+            });
 
             db.ref('gameState/currentQuestion').set({
                 n1: n1,
                 n2: n2,
                 answer: ans,
-                options: options
+                options: optionsWithCoords
             });
         }
 
+        // 🔄 แก้ไขฟังก์ชั่นรีเซ็ตระบบให้ล้างข้อมูลแน่นอน
         function resetGame() {
             if (confirm("ต้องการรีเซ็ตผู้เล่นและคะแนนทั้งหมดใช่หรือไม่?")) {
-                db.ref().set({
-                    players: {},
-                    gameState: {}
-                });
+                db.ref('players').remove();
+                db.ref('gameState').remove();
             }
         }
     </script>
