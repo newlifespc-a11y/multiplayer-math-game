@@ -25,7 +25,7 @@
     <header class="p-4 bg-slate-800 flex justify-between items-center border-b border-slate-700 shadow-md">
         <div>
             <h1 class="text-2xl font-black text-yellow-400 flex items-center gap-2">🏃 Math Runner Grand Prix</h1>
-            <p class="text-xs text-slate-400">สแกน QR Code บนมือถือเพื่อเข้าร่วมการแข่งขัน!</p>
+            <p class="text-xs text-slate-400">สแกน QR Code บนมือถือเพื่อเข้าร่วมการแข่งขัน! (เป้าหมาย 10 คะแนน)</p>
         </div>
         <div class="flex items-center space-x-3">
             <button onclick="startGame()" class="bg-emerald-500 hover:bg-emerald-600 active:scale-95 px-5 py-2.5 rounded-xl font-black text-slate-900 shadow-lg transition text-sm">
@@ -38,7 +38,7 @@
     </header>
 
     <!-- Main Content Grid -->
-    <div class="flex-1 flex flex-col md:flex-row p-4 gap-4 h-[calc(100vh-80px)]">
+    <div class="flex-1 flex flex-col md:flex-row p-4 gap-4 h-[calc(100vh-80px)] relative">
         
         <!-- Sidebar -->
         <div class="w-full md:w-80 bg-slate-800 p-4 rounded-2xl border-2 border-slate-700 flex flex-col items-center shadow-xl">
@@ -58,7 +58,7 @@
         <div class="flex-1 bg-slate-800 p-2 rounded-2xl border-2 border-slate-700 flex flex-col relative overflow-hidden shadow-xl">
             
             <div id="host-question-box" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-20 bg-slate-900/90 border-2 border-cyan-400 px-8 py-2 rounded-2xl shadow-2xl text-center backdrop-blur">
-                <div class="text-[10px] text-cyan-300 font-bold uppercase tracking-wider">โจทย์ประจำข้อ</div>
+                <div class="text-[10px] text-cyan-300 font-bold uppercase tracking-wider">โจทย์ประจำข้อ (เป้าหมาย 10 คะแนน)</div>
                 <div id="host-question-text" class="text-3xl font-black text-yellow-300">กดเริ่มเกมเพื่อแสดงโจทย์</div>
             </div>
 
@@ -67,6 +67,25 @@
                 <div id="players-layer"></div>
             </div>
         </div>
+
+        <!-- Pop-up หน้าจอผู้ชนะ (Winner Screen) -->
+        <div id="winner-modal" class="hidden absolute inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
+            <div class="bg-slate-800 border-4 border-yellow-400 rounded-3xl p-8 max-w-lg w-full shadow-2xl animate-bounce-short">
+                <div class="text-6xl mb-2">🏆</div>
+                <h2 class="text-3xl font-black text-yellow-400 mb-1">WE HAVE A WINNER!</h2>
+                <p class="text-slate-300 text-sm mb-6">คว้าชัยชนะด้วยคะแนนเต็ม 10 คะแนน!</p>
+                
+                <div class="bg-slate-900 border-2 border-slate-700 rounded-2xl p-6 mb-6 flex flex-col items-center">
+                    <div id="winner-avatar" class="text-6xl mb-2">🐹</div>
+                    <div id="winner-name" class="text-3xl font-black text-white">---</div>
+                </div>
+
+                <button onclick="startNewRound()" class="w-full bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-slate-900 font-black py-4 rounded-2xl shadow-xl text-xl transition">
+                    🔄 เริ่มแข่งรอบใหม่ (ล้างคะแนน)
+                </button>
+            </div>
+        </div>
+
     </div>
 
     <script>
@@ -79,9 +98,10 @@
 
         let playersData = {};
         let currentQuestionData = null;
+        let isGameOver = false;
+        const WINNING_SCORE = 10; // กำหนดเป้าหมาย 10 คะแนน
         const colors = ['#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4'];
 
-        // สร้าง QR Code
         const playerUrl = "https://newlifespc-a11y.github.io/multiplayer-math-game/find-number/player.html";
         document.getElementById("qrcode").innerHTML = "";
         new QRCode(document.getElementById("qrcode"), {
@@ -90,7 +110,6 @@
             height: 130
         });
 
-        // ดึงข้อมูล Realtime
         db.ref('players').on('value', (snapshot) => {
             playersData = snapshot.val() || {};
             renderArena();
@@ -106,6 +125,19 @@
             } else {
                 document.getElementById('host-question-text').innerText = "กดเริ่มเกมเพื่อแสดงโจทย์";
                 document.getElementById('answers-layer').innerHTML = "";
+            }
+        });
+
+        db.ref('gameState/winner').on('value', (snapshot) => {
+            const winner = snapshot.val();
+            if (winner) {
+                isGameOver = true;
+                document.getElementById('winner-avatar').innerText = winner.avatar || '🐹';
+                document.getElementById('winner-name').innerText = winner.name;
+                document.getElementById('winner-modal').classList.remove('hidden');
+            } else {
+                isGameOver = false;
+                document.getElementById('winner-modal').classList.add('hidden');
             }
         });
 
@@ -170,10 +202,9 @@
             `).join('');
         }
 
-        // 🎯 ระบบตรวจจับว่าตัวละครชนคำตอบถูกต้องหรือไม่
         let isProcessingHit = false;
         function checkCollisions() {
-            if (!currentQuestionData || isProcessingHit) return;
+            if (!currentQuestionData || isProcessingHit || isGameOver) return;
 
             Object.keys(playersData).forEach(id => {
                 const p = playersData[id];
@@ -184,25 +215,34 @@
                     const dy = p.y - opt.y;
                     const distance = Math.sqrt(dx * dx + dy * dy);
 
-                    // ถ้าระยะห่างน้อยกว่า 6% ถือว่าชน
                     if (distance < 6) {
                         if (opt.val === currentQuestionData.answer) {
                             isProcessingHit = true;
                             const newScore = (p.score || 0) + 1;
                             db.ref(`players/${id}/score`).set(newScore);
 
-                            setTimeout(() => {
-                                startGame();
-                                isProcessingHit = false;
-                            }, 400);
+                            // เช็คว่าถึง 10 คะแนนหรือยัง
+                            if (newScore >= WINNING_SCORE) {
+                                db.ref('gameState/winner').set({
+                                    id: id,
+                                    name: p.name,
+                                    avatar: p.avatar || '🐹'
+                                });
+                                db.ref('gameState/currentQuestion').remove();
+                            } else {
+                                setTimeout(() => {
+                                    startGame();
+                                    isProcessingHit = false;
+                                }, 400);
+                            }
                         }
                     }
                 });
             });
         }
 
-        // 🎲 สุ่มสร้างโจทย์พร้อมตำแหน่งสุ่มตาม 4 โซน
         function startGame() {
+            if(isGameOver) return;
             const n1 = Math.floor(Math.random() * 10) + 1;
             const n2 = Math.floor(Math.random() * 10) + 1;
             const ans = n1 + n2;
@@ -215,14 +255,13 @@
             const allVals = [ans, ...wrongVals];
             allVals.sort(() => Math.random() - 0.5);
 
-            // แบ่งพื้นที่เป็น 4 โซน และสุ่มพิกัดภายในโซนนั้นๆ (เพื่อไม่ให้ทับกันและกระจัดกระจายแบบสุ่ม)
             const zones = [
-                { minX: 18, maxX: 38, minY: 28, maxY: 42 }, // โซน 1: บนซ้าย
-                { minX: 62, maxX: 82, minY: 28, maxY: 42 }, // โซน 2: บนขวา
-                { minX: 18, maxX: 38, minY: 65, maxY: 82 }, // โซน 3: ล่างซ้าย
-                { minX: 62, maxX: 82, minY: 65, maxY: 82 }  // โซน 4: ล่างขวา
+                { minX: 18, maxX: 38, minY: 28, maxY: 42 },
+                { minX: 62, maxX: 82, minY: 28, maxY: 42 },
+                { minX: 18, maxX: 38, minY: 65, maxY: 82 },
+                { minX: 62, maxX: 82, minY: 65, maxY: 82 }
             ];
-            zones.sort(() => Math.random() - 0.5); // สุ่มการสลับโซนของแต่ละคำตอบ
+            zones.sort(() => Math.random() - 0.5);
 
             const optionsWithCoords = allVals.map((val, idx) => {
                 const z = zones[idx];
@@ -239,7 +278,18 @@
             });
         }
 
-        // 🔄 แก้ไขฟังก์ชั่นรีเซ็ตระบบให้ล้างข้อมูลแน่นอน
+        // เริ่มแข่งรอบใหม่ (ล้างคะแนนทุกคนเป็น 0 โดยไม่เตะคนออก)
+        function startNewRound() {
+            db.ref('gameState/winner').remove();
+            Object.keys(playersData).forEach(id => {
+                db.ref(`players/${id}/score`).set(0);
+                db.ref(`players/${id}/x`).set(50);
+                db.ref(`players/${id}/y`).set(50);
+            });
+            isProcessingHit = false;
+            startGame();
+        }
+
         function resetGame() {
             if (confirm("ต้องการรีเซ็ตผู้เล่นและคะแนนทั้งหมดใช่หรือไม่?")) {
                 db.ref('players').remove();
