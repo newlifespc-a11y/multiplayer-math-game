@@ -58,7 +58,7 @@
             </div>
             <div class="bg-yellow-400 text-slate-900 px-4 py-1 rounded-xl text-center font-black shadow">
                 <div class="text-[9px] uppercase tracking-wider">คะแนน</div>
-                <div id="my-score" class="text-xl leading-none">0</div>
+                <div id="my-score" class="text-xl leading-none">0/10</div>
             </div>
         </div>
 
@@ -78,6 +78,14 @@
                     เข้าร่วมแข่งขัน
                 </button>
             </div>
+        </div>
+
+        <!-- Game Over Modal on Mobile -->
+        <div id="mobile-winner-screen" class="hidden absolute inset-0 z-50 bg-slate-950/95 flex flex-col justify-center items-center p-6 text-center">
+            <div class="text-6xl mb-2" id="m-win-icon">🎉</div>
+            <h2 id="m-win-title" class="text-3xl font-black text-yellow-400 mb-2">จบการแข่งขัน!</h2>
+            <div id="m-win-detail" class="text-lg text-slate-200 font-bold mb-6">...</div>
+            <p class="text-xs text-slate-400">รอโฮสต์กดเริ่มเกมรอบถัดไป...</p>
         </div>
 
         <!-- Joystick -->
@@ -140,6 +148,25 @@
                     document.getElementById('answers-layer').innerHTML = "";
                 }
             });
+
+            db.ref('gameState/winner').on('value', (snapshot) => {
+                const winner = snapshot.val();
+                const modal = document.getElementById('mobile-winner-screen');
+                if (winner) {
+                    modal.classList.remove('hidden');
+                    if (winner.id === playerId) {
+                        document.getElementById('m-win-icon').innerText = "🏆";
+                        document.getElementById('m-win-title').innerText = "คุณคือผู้ชนะ!";
+                        document.getElementById('m-win-detail').innerText = "ยินดีด้วย! คุณทำครบ 10 คะแนนเป็นคนแรก";
+                    } else {
+                        document.getElementById('m-win-icon').innerText = "🏁";
+                        document.getElementById('m-win-title').innerText = "จบการแข่งขัน!";
+                        document.getElementById('m-win-detail').innerText = `${winner.avatar} ${winner.name} ได้ 10 คะแนนก่อน!`;
+                    }
+                } else {
+                    modal.classList.add('hidden');
+                }
+            });
         }
 
         function renderAnswersOnMobile(options) {
@@ -160,14 +187,15 @@
                 const container = document.getElementById('players-layer');
                 const keys = Object.keys(players);
 
-                // หากถูก Host กดรีเซ็ตระบบ ให้กลับไปหน้าใส่ชื่อ
                 if (playerId && !players[playerId]) {
                     location.reload();
                     return;
                 }
 
                 if (players[playerId]) {
-                    document.getElementById('my-score').innerText = players[playerId].score || 0;
+                    document.getElementById('my-score').innerText = `${players[playerId].score || 0}/10`;
+                    posX = players[playerId].x || 50;
+                    posY = players[playerId].y || 50;
                 }
 
                 container.innerHTML = keys.map((id, index) => {
