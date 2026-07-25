@@ -49,10 +49,10 @@
         </span>
     </header>
 
-    <!-- Main View: Solid Light Blue Arena -->
+    <!-- Main View -->
     <div class="flex-1 p-3 flex flex-col relative overflow-hidden">
         
-        <!-- Light Blue Area (ไร้จุด) -->
+        <!-- Light Blue Area -->
         <div class="flex-1 bg-sky-200 rounded-xl relative border-2 border-sky-400 overflow-hidden shadow-inner">
             <!-- Options Layer -->
             <div id="options-layer" class="w-full h-full absolute inset-0"></div>
@@ -115,7 +115,7 @@
                 
                 const qEl = document.getElementById('mobile-question');
                 if (currentGameState.status === 'PLAYING') {
-                    qEl.innerText = `โจทย์ (${currentGameState.currentRound}/5): ${currentGameState.question}`;
+                    qEl.innerText = `โจทย์ (${currentGameState.currentRound || 1}/5): ${currentGameState.question || ''}`;
                 } else if (currentGameState.status === 'FINISHED') {
                     qEl.innerText = "🏆 จบเกมแล้ว!";
                 } else {
@@ -130,6 +130,7 @@
 
             container.innerHTML = keys.map((id) => {
                 const p = allPlayers[id];
+                const pName = p.name || 'ผู้เล่น';
                 const x = p.x !== undefined ? p.x : 50;
                 const y = p.y !== undefined ? p.y : 50;
                 const isMe = id === playerId;
@@ -141,7 +142,7 @@
                         ${p.avatar || '🐯'}
                     </div>
                     <span class="text-[8px] font-normal ${isMe ? 'bg-yellow-400 text-slate-900 font-bold' : 'bg-slate-900/80 text-white'} px-1 rounded whitespace-nowrap">
-                        ${p.name}
+                        ${pName}
                     </span>
                 </div>`;
             }).join('');
@@ -155,7 +156,7 @@
             }
 
             container.innerHTML = currentGameState.options.map((opt) => `
-                <div class="absolute transform -translate-x-1/2 -translate-y-1/2 bg-white/90 border-2 border-sky-600 text-slate-900 font-black text-base rounded-xl w-10 h-10 flex items-center justify-center shadow z-10"
+                <div class="absolute transform -translate-x-1/2 -translate-y-1/2 bg-white/95 border-2 border-sky-600 text-slate-900 font-black text-base rounded-xl w-10 h-10 flex items-center justify-center shadow z-10"
                      style="left: ${opt.x}%; top: ${opt.y}%;">
                     ${opt.val}
                 </div>
