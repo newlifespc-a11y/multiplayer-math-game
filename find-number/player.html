@@ -8,213 +8,247 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        body {
-            -webkit-touch-callout: none;
+        * {
+            touch-action: manipulation;
             -webkit-user-select: none;
             user-select: none;
-            touch-action: manipulation;
-            overflow: hidden; /* ป้องกันการเลื่อนหน้าจอเบราว์เซอร์ปกติ */
         }
-        /* กำหนดขนาดสนามเกมให้กว้างกว่าหน้าจอมือถือ */
-        #game-arena {
-            width: 2000px; /* ความกว้างสนาม */
-            height: 2000px; /* ความสูงสนาม */
-            position: absolute;
-            background-image: url('https://w0.peakpx.com/wallpaper/346/304/HD-wallpaper-nature-field-clouds-sky-landscapes-grass.jpg');
-            background-size: cover;
-            background-position: center;
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0f172a;
         }
-        /* คอนเทนเนอร์หลักที่ทำหน้าที่เป็นกล้องตัดส่วน */
+
+        /* หน้าต่างกล้องหลัก */
         #game-viewport {
+            position: relative;
             width: 100vw;
             height: 100vh;
-            position: relative;
-            overflow: hidden; /* ซ่อนส่วนสนามที่เกินหน้าจอ */
+            overflow: hidden;
         }
-        /* สไตล์สำหรับปุ่มจอยสติ๊ก */
-        .joystick-base {
-            width: 150px;
-            height: 150px;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
+
+        /* พื้นหลังสนามแบบ CSS Grid Pattern (ไม่ต้องโหลดรูปนอก) */
+        #game-arena {
             position: absolute;
-            bottom: 50px;
+            width: 1600px;
+            height: 1600px;
+            background-color: #15803d; /* สีทุ่งหญ้า */
+            background-image: 
+                radial-gradient(#22c55e 15%, transparent 16%),
+                radial-gradient(#16a34a 15%, transparent 16%);
+            background-size: 60px 60px;
+            background-position: 0 0, 30px 30px;
+            border: 8px solid #f59e0b;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
+            transition: transform 0.05s linear;
+        }
+
+        /* จอยสติ๊ก */
+        .joystick-container {
+            position: absolute;
+            bottom: 30px;
             left: 50%;
             transform: translateX(-50%);
-            touch-action: none;
-        }
-        .joystick-handle {
-            width: 80px;
-            height: 80px;
-            background: #4ade80;
+            width: 130px;
+            height: 130px;
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(4px);
+            border: 3px solid rgba(255, 255, 255, 0.5);
             border-radius: 50%;
+            touch-action: none;
+            z-index: 40;
+        }
+
+        .joystick-handle {
             position: absolute;
-            top: 35px;
-            left: 35px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            top: 50%;
+            left: 50%;
+            width: 60px;
+            height: 60px;
+            margin-top: -30px;
+            margin-left: -30px;
+            background: #22c55e;
+            border: 3px solid #ffffff;
+            border-radius: 50%;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
             touch-action: none;
         }
     </style>
 </head>
-<body class="bg-slate-900 text-white min-h-screen">
+<body>
 
     <div id="game-viewport">
-        <!-- สนามเกมจริงที่จะเลื่อนไปมา -->
+        <!-- ลานประลอง (Arena) -->
         <div id="game-arena">
-            <div id="players-layer" class="w-full h-full relative">
-                <!-- ตัวละครจะถูกวาดที่นี่ -->
+            <!-- เลเยอร์คำตอบ -->
+            <div id="answers-layer"></div>
+            <!-- เลเยอร์ผู้เล่น -->
+            <div id="players-layer"></div>
+        </div>
+
+        <!-- UI ด้านบน (คะแนน & ชื่อ) -->
+        <div class="absolute top-4 left-4 right-4 z-30 flex justify-between items-center bg-white/95 backdrop-blur p-3 rounded-2xl shadow-xl border-2 border-yellow-400">
+            <div class="flex items-center gap-2">
+                <span class="text-3xl">🐹</span>
+                <div>
+                    <div id="display-name" class="font-bold text-slate-800 text-base leading-tight">น้อง548</div>
+                    <span class="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">🎮 Controller Active</span>
+                </div>
             </div>
-            <div id="answers-layer" class="w-full h-full absolute top-0 left-0">
-                <!-- คำตอบจะถูกวาดที่นี่ -->
+            <div class="bg-yellow-400 text-slate-900 px-4 py-1.5 rounded-xl text-center font-black shadow">
+                <div class="text-[10px] uppercase tracking-wider text-slate-800">คะแนน</div>
+                <div id="my-score" class="text-2xl leading-none">0</div>
             </div>
         </div>
 
-        <!-- UI ส่วนหน้าต่าง (Fixed Position) -->
-        <div id="ui-layer" class="absolute top-0 left-0 w-full h-full p-4 flex flex-col pointer-events-none">
-            <!-- ส่วนหัว: ข้อมูลผู้เล่น -->
-            <div class="bg-white p-3 rounded-3xl flex justify-between items-center shadow-lg pointer-events-auto border-4 border-yellow-400">
-                <div class="flex items-center gap-3">
-                    <span class="text-4xl">🐹</span>
-                    <div>
-                        <h2 class="text-xl font-bold text-slate-800">น้อง548</h2>
-                        <span class="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">🎮 จอยสติ๊กควบคุม</span>
-                    </div>
-                </div>
-                <div class="bg-yellow-400 text-white p-3 px-5 rounded-2xl text-center shadow-md">
-                    <div class="text-xs">คะแนน</div>
-                    <div class="text-3xl font-black">0</div>
-                </div>
-            </div>
-
-            <!-- ข้อความแนะนำที่จะหายไป -->
-            <div id="instruction-msg" class="bg-white text-slate-800 p-6 rounded-3xl shadow-xl border-4 border-yellow-400 text-center mt-auto mb-40 pointer-events-auto mx-4 transition-opacity duration-500">
-                <p class="text-lg font-semibold flex items-center justify-center gap-2">🌱 เลื่อนจอยสติ๊กด้านล่าง เพื่อบังคับ<br>ตัวละครวิ่งไปหาคำตอบครับ!</p>
-            </div>
+        <!-- ข้อความคำแนะนำ (พร้อมปุ่มปิด) -->
+        <div id="instruction-box" class="absolute top-28 left-6 right-6 z-30 bg-white p-4 rounded-2xl shadow-2xl border-4 border-yellow-400 text-center transition-all duration-300">
+            <p class="text-slate-800 font-bold text-sm mb-3">
+                🌱 เลื่อนจอยสติ๊กด้านล่าง เพื่อบังคับตัวละครวิ่งไปหาคำตอบบนสนามครับ!
+            </p>
+            <button onclick="dismissInstruction()" class="bg-yellow-400 hover:bg-yellow-500 active:scale-95 text-slate-900 font-bold text-xs px-5 py-2 rounded-xl shadow">
+                เข้าใจแล้ว (เริ่มเล่น)
+            </button>
         </div>
 
-        <!-- จอยสติ๊กควบคุม -->
-        <div class="joystick-base" id="joystick-base">
-            <div class="joystick-handle" id="joystick-handle"></div>
+        <!-- จอยสติ๊กบังคับ -->
+        <div class="joystick-container" id="joy-base">
+            <div class="joystick-handle" id="joy-handle"></div>
         </div>
     </div>
 
-    <!-- Firebase Script & Logic -->
     <script>
-        // --- ส่วนที่ต้องทำ ---
-        // 1. นำค่า Firebase Config ของอาจารย์มาใส่ที่นี่
         const firebaseConfig = {
-            // apiKey: "...",
-            // authDomain: "...",
-            // databaseURL: "...",
-            // projectId: "...",
-            // storageBucket: "...",
-            // messagingSenderId: "...",
-            // appId: "..."
+            databaseURL: "https://multiplayer-math-game-e021c-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "multiplayer-math-game-e021c"
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        let playerId = 'player_548'; // สมมติ ID
-        const arenaWidth = 2000;
-        const arenaHeight = 2000;
-        let posX = arenaWidth / 2; // เริ่มตรงกลางสนาม
-        let posY = arenaHeight / 2;
-        const speed = 10; // ความเร็วในการเคลื่อนที่
+        // ขนาดสนาม
+        const ARENA_SIZE = 1600;
+        let posX = 800; // จุดเริ่มต้นกลางสนาม
+        let posY = 800;
+        let playerId = 'player_' + Math.floor(Math.random() * 1000);
+        let myScore = 0;
 
         const arena = document.getElementById('game-arena');
-        const instruction = document.getElementById('instruction-msg');
+        const playersLayer = document.getElementById('players-layer');
+        const answersLayer = document.getElementById('answers-layer');
+        const instructionBox = document.getElementById('instruction-box');
 
-        // ฟังก์ชันอัปเดตตำแหน่งกล้อง (Camera Follow)
-        function updateCamera() {
-            const viewportWidth = window.innerWidth;
-            const viewportHeight = window.innerHeight;
-
-            // คำนวณตำแหน่งเพื่อสร้างเอฟเฟกต์กล้องตามตัวละคร
-            let targetX = -posX + (viewportWidth / 2);
-            let targetY = -posY + (viewportHeight / 2);
-
-            // จำกัดขอบเขตไม่ให้กล้องเลื่อนออกนอกสนามเกม
-            targetX = Math.min(0, Math.max(targetX, -(arenaWidth - viewportWidth)));
-            targetY = Math.min(0, Math.max(targetY, -(arenaHeight - viewportHeight)));
-
-            // เลื่อนสนามเกมจริงตามตำแหน่งที่คำนวณได้
-            arena.style.transform = `translate(${targetX}px, ${targetY}px)`;
-        }
-
-        // ฟังชันก์ลบข้อความคำแนะนำเมื่อเริ่มเล่น
-        function hideInstruction() {
-            if (instruction) {
-                instruction.style.opacity = '0';
-                setTimeout(() => {
-                    if (instruction.parentNode) {
-                        instruction.parentNode.removeChild(instruction);
-                    }
-                }, 500); // รอ animation หายไป
+        // ฟังก์ชันลบคำแนะนำ
+        function dismissInstruction() {
+            if (instructionBox) {
+                instructionBox.style.opacity = '0';
+                instructionBox.style.transform = 'scale(0.9)';
+                setTimeout(() => instructionBox.remove(), 300);
             }
         }
 
-        // --- ส่วนควบคุมจอยสติ๊ก (ฉบับย่อเพื่อจำลองการทำงาน) ---
-        const handle = document.getElementById('joystick-handle');
-        const base = document.getElementById('joystick-base');
-        let isDragging = false;
-        let dragStartX, dragStartY;
+        // อัปเดตกล้องตามตัวละครให้อยู่กลางจอ
+        function updateCamera() {
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
 
-        // วาดตัวละครเริ่มแรก (เพื่อจำลอง)
-        const playersLayer = document.getElementById('players-layer');
-        playersLayer.innerHTML = `<div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg border-2 border-white ring-2 ring-black/20 absolute" style="left: ${posX}px; top: ${posY}px; background-color: #EF4444; transform: translate(-50%, -50%);">🐹</div>`;
+            let camX = (vw / 2) - posX;
+            let camY = (vh / 2) - posY;
 
-        // สุ่มคำตอบตัวอย่างไว้ด้านข้าง
-        const answersLayer = document.getElementById('answers-layer');
-        answersLayer.innerHTML = `
-            <div class="bg-white text-slate-800 p-2 rounded px-4 font-bold absolute" style="left: 100px; top: 1000px; transform: translate(-50%, -50%);">10</div>
-            <div class="bg-white text-slate-800 p-2 rounded px-4 font-bold absolute" style="left: 1800px; top: 500px; transform: translate(-50%, -50%);">13</div>
-        `;
+            // จำกัดไม่ให้กล้องหลุดขอบสนาม
+            camX = Math.min(0, Math.max(camX, vw - ARENA_SIZE));
+            camY = Math.min(0, Math.max(camY, vh - ARENA_SIZE));
 
-        handle.addEventListener('touchstart', (e) => {
-            isDragging = true;
-            dragStartX = e.touches[0].clientX;
-            dragStartY = e.touches[0].clientY;
-            hideInstruction(); // ซ่อนคำแนะนำทันทีที่เริ่มจับจอย
+            arena.style.transform = `translate(${camX}px, ${camY}px)`;
+        }
+
+        // วาดตัวละครตัวเอง
+        function renderSelf() {
+            playersLayer.innerHTML = `
+                <div class="absolute flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2 transition-all duration-75"
+                     style="left: ${posX}px; top: ${posY}px;">
+                    <div class="w-12 h-12 bg-yellow-400 border-4 border-white rounded-full flex items-center justify-center text-2xl shadow-lg ring-4 ring-black/20">
+                        🐹
+                    </div>
+                    <span class="bg-slate-900/90 text-yellow-300 font-bold text-xs px-2 py-0.5 rounded-full mt-1 shadow border border-slate-700 whitespace-nowrap">
+                        คุณ (น้อง548)
+                    </span>
+                </div>
+            `;
+            updateCamera();
+        }
+
+        // สุ่มวางคำตอบตัวอย่างบนสนาม
+        function renderSampleAnswers() {
+            const sampleAnswers = [
+                { val: 13, x: 400, y: 400 },
+                { val: 17, x: 1200, y: 400 },
+                { val: 11, x: 400, y: 1200 },
+                { val: 6, x: 1200, y: 1200 }
+            ];
+
+            answersLayer.innerHTML = sampleAnswers.map(ans => `
+                <div class="absolute bg-white/95 text-slate-900 border-4 border-yellow-400 font-black text-2xl w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl transform -translate-x-1/2 -translate-y-1/2"
+                     style="left: ${ans.x}px; top: ${ans.y}px;">
+                    ${ans.val}
+                </div>
+            `).join('');
+        }
+
+        // --- ระบบ Joystick Touch Controls ---
+        const joyBase = document.getElementById('joy-base');
+        const joyHandle = document.getElementById('joy-handle');
+        let isTouching = false;
+        let startX, startY;
+        const maxRadius = 40;
+
+        joyBase.addEventListener('touchstart', (e) => {
+            isTouching = true;
+            dismissInstruction();
+            const touch = e.touches[0];
+            const rect = joyBase.getBoundingClientRect();
+            startX = rect.left + rect.width / 2;
+            startY = rect.top + rect.height / 2;
         });
 
         document.addEventListener('touchmove', (e) => {
-            if (!isDragging) return;
-            const touchX = e.touches[0].clientX;
-            const touchY = e.touches[0].clientY;
-            const diffX = touchX - dragStartX;
-            const diffY = touchY - dragStartY;
-            const distance = Math.sqrt(diffX*diffX + diffY*diffY);
-            const maxRadius = 35; // ขอบเขตการลากจอย
+            if (!isTouching) return;
+            const touch = e.touches[0];
+            const deltaX = touch.clientX - startX;
+            const deltaY = touch.clientY - startY;
+            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
-            if (distance > 0) {
-                const moveX = (diffX / distance) * Math.min(distance, maxRadius);
-                const moveY = (diffY / distance) * Math.min(distance, maxRadius);
-                handle.style.transform = `translate(${moveX}px, ${moveY}px)`;
+            const angle = Math.atan2(deltaY, deltaX);
+            const moveDist = Math.min(distance, maxRadius);
 
-                // คำนวณความเร็วตามทิศทางจอย
-                const speedX = (diffX / distance) * (Math.min(distance, maxRadius) / maxRadius) * speed;
-                const speedY = (diffY / distance) * (Math.min(distance, maxRadius) / maxRadius) * speed;
+            const handleX = Math.cos(angle) * moveDist;
+            const handleY = Math.sin(angle) * moveDist;
 
-                // อัปเดตตำแหน่งผู้เล่น
-                posX = Math.min(Math.max(20, posX + speedX), arenaWidth - 20);
-                posY = Math.min(Math.max(20, posY + speedY), arenaHeight - 20);
+            joyHandle.style.transform = `translate(${handleX}px, ${handleY}px)`;
 
-                // วาดตัวละครใหม่ (เพื่อจำลอง)
-                playersLayer.innerHTML = `<div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg border-2 border-white ring-2 ring-black/20 absolute" style="left: ${posX}px; top: ${posY}px; background-color: #EF4444; transform: translate(-50%, -50%);">🐹</div>`;
+            // เคลื่อนที่ตัวละคร
+            const moveSpeed = 12;
+            posX += Math.cos(angle) * (moveDist / maxRadius) * moveSpeed;
+            posY += Math.sin(angle) * (moveDist / maxRadius) * moveSpeed;
 
-                // **นี่คือส่วนสำคัญที่แก้ไข: สั่งให้กล้องเลื่อนตาม**
-                updateCamera(); 
-            }
+            // ชนขอบสนาม
+            posX = Math.max(40, Math.min(ARENA_SIZE - 40, posX));
+            posY = Math.max(40, Math.min(ARENA_SIZE - 40, posY));
+
+            renderSelf();
         });
 
         document.addEventListener('touchend', () => {
-            isDragging = false;
-            handle.style.transform = 'translate(0px, 0px)';
+            isTouching = false;
+            joyHandle.style.transform = `translate(0px, 0px)`;
         });
 
-        // อัปเดตตำแหน่งเริ่มต้นของกล้อง
-        updateCamera();
-
+        // เริ่มต้นทำงาน
+        renderSelf();
+        renderSampleAnswers();
+        window.addEventListener('resize', updateCamera);
     </script>
 </body>
 </html>
