@@ -22,7 +22,6 @@
             background-color: #0f172a;
         }
 
-        /* หน้าต่างกล้องหลัก */
         #game-viewport {
             position: relative;
             width: 100vw;
@@ -30,12 +29,12 @@
             overflow: hidden;
         }
 
-        /* พื้นหลังสนามแบบ CSS Grid Pattern (ไม่ต้องโหลดรูปนอก) */
+        /* พื้นหลังสนามแบบ CSS Grid Pattern */
         #game-arena {
             position: absolute;
             width: 1600px;
             height: 1600px;
-            background-color: #15803d; /* สีทุ่งหญ้า */
+            background-color: #15803d;
             background-image: 
                 radial-gradient(#22c55e 15%, transparent 16%),
                 radial-gradient(#16a34a 15%, transparent 16%);
@@ -83,33 +82,39 @@
     <div id="game-viewport">
         <!-- ลานประลอง (Arena) -->
         <div id="game-arena">
-            <!-- เลเยอร์คำตอบ -->
             <div id="answers-layer"></div>
-            <!-- เลเยอร์ผู้เล่น -->
             <div id="players-layer"></div>
         </div>
 
         <!-- UI ด้านบน (คะแนน & ชื่อ) -->
-        <div class="absolute top-4 left-4 right-4 z-30 flex justify-between items-center bg-white/95 backdrop-blur p-3 rounded-2xl shadow-xl border-2 border-yellow-400">
+        <div class="absolute top-3 left-3 right-3 z-30 flex justify-between items-center bg-white/95 backdrop-blur p-2.5 rounded-2xl shadow-xl border-2 border-yellow-400">
             <div class="flex items-center gap-2">
                 <span class="text-3xl">🐹</span>
                 <div>
-                    <div id="display-name" class="font-bold text-slate-800 text-base leading-tight">น้อง548</div>
+                    <div id="display-name" class="font-bold text-slate-800 text-sm leading-tight">น้อง548</div>
                     <span class="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">🎮 Controller Active</span>
                 </div>
             </div>
-            <div class="bg-yellow-400 text-slate-900 px-4 py-1.5 rounded-xl text-center font-black shadow">
-                <div class="text-[10px] uppercase tracking-wider text-slate-800">คะแนน</div>
-                <div id="my-score" class="text-2xl leading-none">0</div>
+            <div class="bg-yellow-400 text-slate-900 px-4 py-1 rounded-xl text-center font-black shadow">
+                <div class="text-[9px] uppercase tracking-wider text-slate-800">คะแนน</div>
+                <div id="my-score" class="text-xl leading-none">0</div>
+            </div>
+        </div>
+
+        <!-- 🌟 เพิ่มแถบแสดงโจทย์คณิตศาสตร์ (Question Box) 🌟 -->
+        <div class="absolute top-20 left-6 right-6 z-30 bg-slate-900/90 text-white p-3 rounded-2xl shadow-2xl border-2 border-cyan-400 text-center backdrop-blur">
+            <div class="text-[10px] text-cyan-300 font-bold uppercase tracking-wider mb-0.5">โจทย์คณิตคิดเร็ว</div>
+            <div id="question-text" class="text-2xl font-black text-yellow-300">
+                10 + 3 = ?
             </div>
         </div>
 
         <!-- ข้อความคำแนะนำ (พร้อมปุ่มปิด) -->
-        <div id="instruction-box" class="absolute top-28 left-6 right-6 z-30 bg-white p-4 rounded-2xl shadow-2xl border-4 border-yellow-400 text-center transition-all duration-300">
-            <p class="text-slate-800 font-bold text-sm mb-3">
-                🌱 เลื่อนจอยสติ๊กด้านล่าง เพื่อบังคับตัวละครวิ่งไปหาคำตอบบนสนามครับ!
+        <div id="instruction-box" class="absolute top-40 left-6 right-6 z-30 bg-white p-4 rounded-2xl shadow-2xl border-4 border-yellow-400 text-center transition-all duration-300">
+            <p class="text-slate-800 font-bold text-xs mb-3">
+                🌱 เลื่อนจอยสติ๊กด้านล่าง เพื่อบังคับตัวละครวิ่งไปชนข้อที่เป็นคำตอบถูกต้องครับ!
             </p>
-            <button onclick="dismissInstruction()" class="bg-yellow-400 hover:bg-yellow-500 active:scale-95 text-slate-900 font-bold text-xs px-5 py-2 rounded-xl shadow">
+            <button onclick="dismissInstruction()" class="bg-yellow-400 hover:bg-yellow-500 active:scale-95 text-slate-900 font-bold text-xs px-5 py-1.5 rounded-xl shadow">
                 เข้าใจแล้ว (เริ่มเล่น)
             </button>
         </div>
@@ -128,11 +133,10 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // ขนาดสนาม
         const ARENA_SIZE = 1600;
-        let posX = 800; // จุดเริ่มต้นกลางสนาม
+        let posX = 800; 
         let posY = 800;
-        let playerId = 'player_' + Math.floor(Math.random() * 1000);
+        let currentAnswer = 13;
         let myScore = 0;
 
         const arena = document.getElementById('game-arena');
@@ -140,7 +144,6 @@
         const answersLayer = document.getElementById('answers-layer');
         const instructionBox = document.getElementById('instruction-box');
 
-        // ฟังก์ชันลบคำแนะนำ
         function dismissInstruction() {
             if (instructionBox) {
                 instructionBox.style.opacity = '0';
@@ -149,7 +152,6 @@
             }
         }
 
-        // อัปเดตกล้องตามตัวละครให้อยู่กลางจอ
         function updateCamera() {
             const vw = window.innerWidth;
             const vh = window.innerHeight;
@@ -157,14 +159,12 @@
             let camX = (vw / 2) - posX;
             let camY = (vh / 2) - posY;
 
-            // จำกัดไม่ให้กล้องหลุดขอบสนาม
             camX = Math.min(0, Math.max(camX, vw - ARENA_SIZE));
             camY = Math.min(0, Math.max(camY, vh - ARENA_SIZE));
 
             arena.style.transform = `translate(${camX}px, ${camY}px)`;
         }
 
-        // วาดตัวละครตัวเอง
         function renderSelf() {
             playersLayer.innerHTML = `
                 <div class="absolute flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2 transition-all duration-75"
@@ -172,7 +172,7 @@
                     <div class="w-12 h-12 bg-yellow-400 border-4 border-white rounded-full flex items-center justify-center text-2xl shadow-lg ring-4 ring-black/20">
                         🐹
                     </div>
-                    <span class="bg-slate-900/90 text-yellow-300 font-bold text-xs px-2 py-0.5 rounded-full mt-1 shadow border border-slate-700 whitespace-nowrap">
+                    <span class="bg-slate-900/90 text-yellow-300 font-bold text-[10px] px-2 py-0.5 rounded-full mt-1 shadow border border-slate-700 whitespace-nowrap">
                         คุณ (น้อง548)
                     </span>
                 </div>
@@ -180,24 +180,38 @@
             updateCamera();
         }
 
-        // สุ่มวางคำตอบตัวอย่างบนสนาม
-        function renderSampleAnswers() {
-            const sampleAnswers = [
-                { val: 13, x: 400, y: 400 },
-                { val: 17, x: 1200, y: 400 },
-                { val: 11, x: 400, y: 1200 },
-                { val: 6, x: 1200, y: 1200 }
+        // สุ่มโจทย์ใหม่
+        function generateQuestion() {
+            const n1 = Math.floor(Math.random() * 10) + 1;
+            const n2 = Math.floor(Math.random() * 10) + 1;
+            currentAnswer = n1 + n2;
+
+            document.getElementById('question-text').innerText = `${n1} + ${n2} = ?`;
+
+            // สุ่มกระจาย 4 ตัวเลือกบนสนาม
+            let options = [currentAnswer];
+            while (options.length < 4) {
+                let wrong = Math.floor(Math.random() * 20) + 1;
+                if (!options.includes(wrong)) options.push(wrong);
+            }
+            options.sort(() => Math.random() - 0.5);
+
+            const coords = [
+                { x: 400, y: 400 },
+                { x: 1200, y: 400 },
+                { x: 400, y: 1200 },
+                { x: 1200, y: 1200 }
             ];
 
-            answersLayer.innerHTML = sampleAnswers.map(ans => `
-                <div class="absolute bg-white/95 text-slate-900 border-4 border-yellow-400 font-black text-2xl w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl transform -translate-x-1/2 -translate-y-1/2"
-                     style="left: ${ans.x}px; top: ${ans.y}px;">
-                    ${ans.val}
+            answersLayer.innerHTML = options.map((val, idx) => `
+                <div class="absolute bg-white text-slate-900 border-4 border-yellow-400 font-black text-2xl w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl transform -translate-x-1/2 -translate-y-1/2"
+                     style="left: ${coords[idx].x}px; top: ${coords[idx].y}px;">
+                    ${val}
                 </div>
             `).join('');
         }
 
-        // --- ระบบ Joystick Touch Controls ---
+        // --- ระบบ Joystick ---
         const joyBase = document.getElementById('joy-base');
         const joyHandle = document.getElementById('joy-handle');
         let isTouching = false;
@@ -228,12 +242,10 @@
 
             joyHandle.style.transform = `translate(${handleX}px, ${handleY}px)`;
 
-            // เคลื่อนที่ตัวละคร
             const moveSpeed = 12;
             posX += Math.cos(angle) * (moveDist / maxRadius) * moveSpeed;
             posY += Math.sin(angle) * (moveDist / maxRadius) * moveSpeed;
 
-            // ชนขอบสนาม
             posX = Math.max(40, Math.min(ARENA_SIZE - 40, posX));
             posY = Math.max(40, Math.min(ARENA_SIZE - 40, posY));
 
@@ -245,9 +257,9 @@
             joyHandle.style.transform = `translate(0px, 0px)`;
         });
 
-        // เริ่มต้นทำงาน
+        // เริ่มต้น
         renderSelf();
-        renderSampleAnswers();
+        generateQuestion();
         window.addEventListener('resize', updateCamera);
     </script>
 </body>
