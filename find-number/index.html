@@ -9,10 +9,10 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        .arena-bg {
-            background-color: #1e293b;
-            background-image: radial-gradient(#334155 1px, transparent 1px);
-            background-size: 20px 20px;
+        .arena-sky {
+            background-color: #bae6fd; /* สีฟ้าอ่อน */
+            background-image: radial-gradient(#0284c7 1.5px, transparent 1.5px);
+            background-size: 24px 24px;
         }
     </style>
 </head>
@@ -21,40 +21,38 @@
     <!-- Header Section -->
     <header class="p-4 bg-slate-800 flex justify-between items-center border-b border-slate-700">
         <div>
-            <h1 class="text-2xl font-bold text-yellow-400">🏃 Math Runner Grand Prix</h1>
-            <p class="text-xs text-slate-400">สแกน QR Code บนมือถือเพื่อเข้าร่วมการแข่งขัน!</p>
+            <h1 class="text-2xl font-bold text-yellow-400">🏃 ลานประลองสีฟ้า (Host Area)</h1>
+            <p class="text-xs text-slate-400">สแกน QR Code เพื่อสร้างตัวละครและลงสนามทันที</p>
         </div>
-        <div class="flex items-center space-x-4">
-            <button onclick="startGame()" class="bg-emerald-500 hover:bg-emerald-600 px-6 py-2 rounded-lg font-bold text-white shadow-lg transition">เริ่มเกม!</button>
-            <button onclick="resetGame()" class="bg-rose-600 hover:bg-rose-700 px-4 py-2 rounded-lg font-bold text-white shadow transition text-sm">รีเซ็ตระบบ</button>
+        <div>
+            <button onclick="resetGame()" class="bg-rose-600 hover:bg-rose-700 px-4 py-2 rounded-lg font-bold text-white shadow transition text-sm">รีเซ็ตผู้เล่นทั้งหมด</button>
         </div>
     </header>
 
     <div class="flex-1 flex flex-col md:flex-row p-4 gap-4">
         <!-- Sidebar: QR Code & Player List -->
         <div class="w-full md:w-1/4 bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col items-center">
-            <h2 class="text-lg font-bold mb-2 text-center text-cyan-400">สแกนเพื่อเล่นเกม</h2>
+            <h2 class="text-lg font-bold mb-2 text-center text-cyan-400">สแกนเพื่อเข้าร่วม</h2>
             <div id="qrcode" class="bg-white p-3 rounded-lg shadow-md mb-4"></div>
             
             <h3 class="font-semibold text-slate-300 w-full border-b border-slate-600 pb-1 mb-2">
-                ผู้เล่นในสนาม (<span id="player-count">0</span>)
+                ตัวละครในสนาม (<span id="player-count">0</span>)
             </h3>
             <ul id="player-join-list" class="w-full flex-1 overflow-y-auto space-y-2 text-sm">
-                <li class="text-slate-500 text-center italic py-4">กำลังรอผู้เล่นเข้าร่วม...</li>
+                <li class="text-slate-500 text-center italic py-4">กำลังรอผู้เล่นสแกน...</li>
             </ul>
         </div>
 
-        <!-- Main Arena View -->
+        <!-- Main Sky Arena View -->
         <div class="flex-1 bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold text-slate-200">ลานประลองความเร็ว (2D Arena)</h2>
-                <span id="game-status" class="bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-full text-xs font-semibold">สถานะ: รอเริ่มต้น</span>
+            <div class="flex justify-between items-center mb-2">
+                <h2 class="text-xl font-bold text-slate-200">ลานประลองสีฟ้าอ่อน</h2>
             </div>
 
-            <!-- 2D Arena Canvas Box -->
-            <div id="arena-container" class="flex-1 arena-bg rounded-xl relative border-2 border-slate-600 overflow-hidden min-h-[400px]">
+            <!-- Light Blue 2D Arena Canvas Box -->
+            <div id="arena-container" class="flex-1 arena-sky rounded-xl relative border-4 border-sky-400 shadow-inner overflow-hidden min-h-[450px]">
                 <div id="players-layer" class="w-full h-full relative">
-                    <!-- Dynamic player avatars will render here -->
+                    <!-- Dynamic player avatars render here -->
                 </div>
             </div>
         </div>
@@ -71,7 +69,7 @@
         let playersData = {};
         const colors = ['#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#10B981'];
 
-        // Generate QR Code targeting player.html
+        // QR Code pointing directly to player.html
         const playerUrl = "https://newlifespc-a11y.github.io/multiplayer-math-game/find-number/player.html";
         new QRCode(document.getElementById("qrcode"), {
             text: playerUrl,
@@ -79,7 +77,7 @@
             height: 140
         });
 
-        // Listen for Realtime Player Updates
+        // Sync Players Position Realtime
         db.ref('players').on('value', (snapshot) => {
             playersData = snapshot.val() || {};
             renderArena();
@@ -93,7 +91,7 @@
             countEl.innerText = keys.length;
 
             if (keys.length === 0) {
-                listEl.innerHTML = '<li class="text-slate-500 text-center italic py-4">กำลังรอผู้เล่นเข้าร่วม...</li>';
+                listEl.innerHTML = '<li class="text-slate-500 text-center italic py-4">กำลังรอผู้เล่นสแกน...</li>';
                 return;
             }
 
@@ -105,7 +103,7 @@
                         <span class="w-3 h-3 rounded-full" style="background-color: ${color}"></span>
                         ${p.name}
                     </span>
-                    <span class="text-xs bg-slate-800 px-2 py-1 rounded text-slate-300">คะแนน: ${p.score || 0}</span>
+                    <span class="text-xs text-sky-300">x: ${Math.round(p.x)}%, y: ${Math.round(p.y)}%</span>
                 </li>`;
             }).join('');
         }
@@ -115,7 +113,7 @@
             const keys = Object.keys(playersData);
 
             if (keys.length === 0) {
-                container.innerHTML = '<div class="absolute inset-0 flex items-center justify-center text-slate-500 font-semibold">ยังไม่มีผู้เล่นอยู่ในสนาม</div>';
+                container.innerHTML = '<div class="absolute inset-0 flex items-center justify-center text-slate-600 font-bold text-lg">ยังไม่มีผู้เล่นในสนาม (สแกน QR Code เพื่อเข้ามาได้เลย)</div>';
                 return;
             }
 
@@ -126,33 +124,22 @@
                 const y = p.y !== undefined ? p.y : 50;
 
                 return `
-                <div class="absolute transition-all duration-200 ease-out flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2" 
+                <div class="absolute transition-all duration-75 ease-out flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2" 
                      style="left: ${x}%; top: ${y}%;">
-                    <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg border-2 border-white ring-2 ring-black/20" 
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-md border-2 border-white ring-2 ring-sky-600/30" 
                          style="background-color: ${color}">
                         🏃
                     </div>
-                    <span class="mt-1 text-[11px] font-bold bg-slate-900/90 text-white px-2 py-0.5 rounded shadow border border-slate-700 whitespace-nowrap">
-                        ${p.name} (${p.score || 0})
+                    <span class="mt-1 text-[11px] font-bold bg-slate-900/80 text-white px-2 py-0.5 rounded shadow border border-slate-700 whitespace-nowrap">
+                        ${p.name}
                     </span>
                 </div>`;
             }).join('');
         }
 
-        function startGame() {
-            db.ref('gameState').set({ status: 'PLAYING', timestamp: Date.now() });
-            document.getElementById('game-status').innerText = 'สถานะ: กำลังแข่งขัน 🔥';
-            document.getElementById('game-status').className = 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-semibold';
-        }
-
         function resetGame() {
-            if (confirm("ต้องการลบข้อมูลผู้เล่นและรีเซ็ตเกมใช่หรือไม่?")) {
-                db.ref().set({
-                    players: {},
-                    gameState: { status: 'WAITING' }
-                });
-                document.getElementById('game-status').innerText = 'สถานะ: รอเริ่มต้น';
-                document.getElementById('game-status').className = 'bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-full text-xs font-semibold';
+            if (confirm("ต้องการลบผู้เล่นทั้งหมดออกจากสนามใช่หรือไม่?")) {
+                db.ref('players').set({});
             }
         }
     </script>
