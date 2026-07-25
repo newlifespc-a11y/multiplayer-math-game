@@ -8,14 +8,22 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        /* วาดเส้นทางถนนจำลองด้วย SVG Background */
+        .map-bg {
+            background-color: #15803d; /* สีพื้นหญ้า */
+            background-image: radial-gradient(#166534 2px, transparent 2px);
+            background-size: 24px 24px;
+        }
+    </style>
 </head>
 <body class="bg-slate-900 text-white min-h-screen flex flex-col font-sans select-none">
 
     <!-- Header Section -->
     <header class="p-4 bg-slate-800 flex justify-between items-center border-b border-slate-700">
         <div>
-            <h1 class="text-2xl font-bold text-yellow-400">🏃 Math Runner Grand Prix</h1>
-            <p class="text-xs text-slate-400">สแกน QR Code แล้ววิ่งชนตัวเลขคำตอบที่ถูกต้องบนกระดาน!</p>
+            <h1 class="text-2xl font-bold text-yellow-400">🗺️ Math Runner - Adventure Path</h1>
+            <p class="text-xs text-slate-400">สแกน QR Code แล้ววิ่งตามเส้นทางไปชนคำตอบที่ถูกต้อง!</p>
         </div>
         <div class="flex items-center gap-3">
             <button onclick="startGame()" class="bg-emerald-500 hover:bg-emerald-600 px-5 py-2 rounded-lg font-bold text-white shadow transition text-sm">เริ่มเกม</button>
@@ -53,12 +61,23 @@
                 </div>
             </div>
 
-            <!-- Solid Light Blue Arena Container -->
-            <div id="arena-container" class="flex-1 bg-sky-200 rounded-xl relative border-4 border-sky-400 shadow-inner overflow-hidden min-h-[420px]">
+            <!-- Arena Container With Road Graphic -->
+            <div id="arena-container" class="flex-1 map-bg rounded-xl relative border-4 border-emerald-700 shadow-2xl overflow-hidden min-h-[420px]">
+                
+                <!-- Road SVG Canvas Line -->
+                <svg class="absolute inset-0 w-full h-full pointer-events-none z-0" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M 15% 20% C 35% 10%, 65% 10%, 85% 25% C 95% 40%, 80% 60%, 50% 50% C 20% 40%, 10% 70%, 25% 80% C 45% 90%, 75% 85%, 85% 80%" 
+                          fill="none" stroke="#fef08a" stroke-width="36" stroke-linecap="round" stroke-linejoin="round" opacity="0.3"/>
+                    <path d="M 15% 20% C 35% 10%, 65% 10%, 85% 25% C 95% 40%, 80% 60%, 50% 50% C 20% 40%, 10% 70%, 25% 80% C 45% 90%, 75% 85%, 85% 80%" 
+                          fill="none" stroke="#d97706" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M 15% 20% C 35% 10%, 65% 10%, 85% 25% C 95% 40%, 80% 60%, 50% 50% C 20% 40%, 10% 70%, 25% 80% C 45% 90%, 75% 85%, 85% 80%" 
+                          fill="none" stroke="#fef08a" stroke-width="2" stroke-dasharray="8 8" stroke-linecap="round"/>
+                </svg>
+
                 <!-- Target Options Layer -->
-                <div id="options-layer" class="w-full h-full absolute inset-0"></div>
+                <div id="options-layer" class="w-full h-full absolute inset-0 z-10"></div>
                 <!-- Players Avatar Layer -->
-                <div id="players-layer" class="w-full h-full absolute inset-0"></div>
+                <div id="players-layer" class="w-full h-full absolute inset-0 z-20"></div>
             </div>
         </div>
     </div>
@@ -74,6 +93,13 @@
         let playersData = {};
         let currentGameState = {};
         let isProcessingHit = false;
+
+        // พิกัดจุดบนเส้นทางถนน (เปอร์เซ็นต์ X, Y)
+        const roadPathPoints = [
+            { x: 15, y: 20 }, { x: 35, y: 15 }, { x: 65, y: 15 }, { x: 85, y: 25 },
+            { x: 80, y: 55 }, { x: 65, y: 52 }, { x: 50, y: 50 }, { x: 30, y: 48 },
+            { x: 15, y: 68 }, { x: 25, y: 80 }, { x: 55, y: 85 }, { x: 85, y: 80 }
+        ];
 
         const playerUrl = "https://newlifespc-a11y.github.io/multiplayer-math-game/find-number/player.html";
         new QRCode(document.getElementById("qrcode"), { text: playerUrl, width: 140, height: 140 });
@@ -146,15 +172,15 @@
             const keys = Object.keys(playersData);
 
             if (keys.length === 0) {
-                container.innerHTML = '<div class="absolute inset-0 flex items-center justify-center text-slate-500 font-bold text-lg">ยังไม่มีผู้เล่นในสนาม</div>';
+                container.innerHTML = '<div class="absolute inset-0 flex items-center justify-center text-slate-300 font-bold text-lg drop-shadow">ยังไม่มีผู้เล่นในสนาม</div>';
                 return;
             }
 
             container.innerHTML = keys.map((id) => {
                 const p = playersData[id];
                 const pName = p.name || 'ผู้เล่น';
-                const x = p.x !== undefined ? p.x : 50;
-                const y = p.y !== undefined ? p.y : 50;
+                const x = p.x !== undefined ? p.x : 15;
+                const y = p.y !== undefined ? p.y : 20;
 
                 return `
                 <div class="absolute transition-all duration-75 ease-out flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2 z-20" 
@@ -162,14 +188,13 @@
                     <div class="text-2xl filter drop-shadow-md">
                         ${p.avatar || '🐯'}
                     </div>
-                    <span class="text-[8px] font-medium bg-slate-900/80 text-white px-1.5 py-0.2 rounded shadow whitespace-nowrap">
+                    <span class="text-[8px] font-medium bg-slate-900/80 text-white px-1.5 py-0.2 rounded shadow whitespace-nowrap border border-slate-700">
                         ${pName} (${p.score || 0})
                     </span>
                 </div>`;
             }).join('');
         }
 
-        // ปรับขนาดป้ายให้เล็กลง (w-10 h-10, text-base)
         function renderOptions() {
             const container = document.getElementById('options-layer');
             if (currentGameState.status !== 'PLAYING' || !currentGameState.options) {
@@ -178,7 +203,7 @@
             }
 
             container.innerHTML = currentGameState.options.map((opt) => `
-                <div class="absolute transform -translate-x-1/2 -translate-y-1/2 bg-white/95 border-2 border-sky-600 text-slate-900 font-black text-base rounded-xl w-10 h-10 flex items-center justify-center shadow-md z-10"
+                <div class="absolute transform -translate-x-1/2 -translate-y-1/2 bg-amber-100 border-2 border-amber-600 text-amber-900 font-black text-base rounded-xl w-10 h-10 flex items-center justify-center shadow-lg z-10"
                      style="left: ${opt.x}%; top: ${opt.y}%;">
                     ${opt.val}
                 </div>
@@ -197,7 +222,7 @@
                 const p = playersData[pId];
                 const dist = Math.hypot(p.x - targetOpt.x, p.y - targetOpt.y);
 
-                if (dist < 5) { // ปรับระยะการชนให้กระชับขึ้นตามขนาดป้ายที่ลดลง
+                if (dist < 5) {
                     isProcessingHit = true;
                     let newScore = (p.score || 0) + 1;
                     
@@ -217,27 +242,6 @@
                     }
                 }
             });
-        }
-
-        // ฟังก์ชันสุ่มตำแหน่งแบบกระจายตัว ไม่ให้ทับซ้อนกัน
-        function generateRandomPositions(count) {
-            let positions = [];
-            let attempts = 0;
-
-            while (positions.length < count && attempts < 200) {
-                attempts++;
-                // สุ่มพิกัดให้อยู่ในขอบเขต 12% - 88% ของสนาม
-                let newX = Math.floor(Math.random() * 76) + 12;
-                let newY = Math.floor(Math.random() * 76) + 12;
-
-                // ตรวจสอบว่าห่างจากป้ายอื่นอย่างน้อย 15%
-                let isOverlap = positions.some(pos => Math.hypot(pos.x - newX, pos.y - newY) < 15);
-
-                if (!isOverlap) {
-                    positions.push({ x: newX, y: newY });
-                }
-            }
-            return positions;
         }
 
         function generateNextQuestion(roundNum) {
@@ -274,13 +278,13 @@
             }
             choices.sort(() => Math.random() - 0.5);
 
-            // สร้างพิกัดแบบสุ่มกระจายทั่วสนาม ไม่ซ้ำตำแหน่งเดิม
-            const randomPositions = generateRandomPositions(5);
+            // สุ่มเลือก 5 ตำแหน่งจากจุดพิกัดถนน roadPathPoints เท่านั้น
+            const shuffledRoadPoints = [...roadPathPoints].sort(() => Math.random() - 0.5);
 
             const optionsData = choices.map((val, idx) => ({
                 val: val,
-                x: randomPositions[idx].x,
-                y: randomPositions[idx].y
+                x: shuffledRoadPoints[idx].x,
+                y: shuffledRoadPoints[idx].y
             }));
 
             db.ref('gameState').set({
