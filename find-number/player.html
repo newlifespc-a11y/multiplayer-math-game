@@ -53,7 +53,7 @@
                 <span id="my-avatar" class="text-3xl">🐹</span>
                 <div>
                     <div id="display-name" class="font-bold text-slate-800 text-sm leading-tight">...</div>
-                    <span class="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">🎮 Controller Ready</span>
+                    <span class="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">🎮 Controller Active</span>
                 </div>
             </div>
             <div class="bg-yellow-400 text-slate-900 px-4 py-1 rounded-xl text-center font-black shadow">
@@ -98,6 +98,14 @@
         let posX = 50; 
         let posY = 50;
         const avatars = ['🐹', '🦊', '🐱', '🐶', '🦁', '🐸'];
+        const colors = ['#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4'];
+
+        const answerCoords = [
+            { x: 38, y: 36 },
+            { x: 84, y: 36 },
+            { x: 38, y: 80 },
+            { x: 84, y: 80 }
+        ];
 
         function joinGame() {
             const name = document.getElementById('player-name').value.trim();
@@ -122,20 +130,88 @@
                 document.getElementById('my-avatar').innerText = myAvatar;
 
                 db.ref('players/' + playerId).onDisconnect().remove();
-                listenQuestion();
+
+                // ฟังความเคลื่อนไหว
+                listenGameState();
+                listenPlayers();
             }).catch(err => alert("เกิดข้อผิดพลาดในการเชื่อมต่อ: " + err.message));
         }
 
-        function listenQuestion() {
+        // ดึงโจทย์และตัวเลือก 4 ข้อลงมือถือ
+        function listenGameState() {
             db.ref('gameState/currentQuestion').on('value', (snapshot) => {
                 const q = snapshot.val();
                 if(q) {
                     document.getElementById('question-text').innerText = `${q.n1} + ${q.n2} = ?`;
+                    renderAnswersOnMobile(q.options);
                 }
             });
         }
 
-        // Joystick Movement
+        function renderAnswersOnMobile(options) {
+            const layer = document.getElementById('answers-layer');
+            if(!options) return;
+
+            layer.innerHTML = options.map((val, idx) => `
+                <div class="absolute bg-white text-slate-900 border-4 border-yellow-400 font-black text-2xl w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl transform -translate-x-1/2 -translate-y-1/2 z-0"
+                     style="left: ${answerCoords[idx].x * 10}px; top: ${answerCoords[idx].y * 10}px;">
+                    ${val}
+                </div>
+            `).join('');
+        }
+
+        // ดึงผู้เล่นและอัปเดตคะแนนตัวเอง
+        function listenPlayers() {
+            db.ref('players').on('value', (snapshot) => {
+                const players = snapshot.val() || {};
+                const container = document.getElementById('players-layer');
+                const keys = Object.keys(players);
+
+                if (players[playerId]) {
+                    document.getElementById('my-score').innerText = players[playerId].score || 0;
+                }
+
+                container.innerHTML = keys.map((id, index) => {
+                    const p = players[id];
+                    const color = colors[index % colors.length];
+                    const isMe = id === playerId;
+
+                    return `
+                    <div class="absolute flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2 z-10 transition-all duration-75"
+                         style="left: ${(p.x || 50) * 10}px; top: ${(p.y || 50) * 10}px;">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg border-2 ${isMe ? 'border-yellow-300 ring-4 ring-yellow-400/50' : 'border-white'}"
+                             style="background-color: ${color}">
+                            ${p.avatar || '🐹'}
+                        </div>
+                        <span class="mt-1 text-[10px] font-bold ${isMe ? 'bg-yellow-400 text-slate-900' : 'bg-slate-900/90 text-white'} px-2 py-0.5 rounded-full shadow border border-slate-700 whitespace-nowrap">
+                            ${p.name}
+                        </span>
+                    </div>`;
+                }).join('');
+
+                updateCamera();
+            });
+        }
+
+        // ให้กล้องแพนตามผู้เล่น
+        function updateCamera() {
+            const arena = document.getElementById('game-arena');
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+
+            const px = posX * 10;
+            const py = posY * 10;
+
+            let camX = (vw / 2) - px;
+            let camY = (vh / 2) - py;
+
+            camX = Math.min(0, Math.max(camX, vw - 1000));
+            camY = Math.min(0, Math.max(camY, vh - 1000));
+
+            arena.style.transform = `translate(${camX}px, ${camY}px)`;
+        }
+
+        // Joystick Control
         const joyBase = document.getElementById('joy-base');
         const joyHandle = document.getElementById('joy-handle');
         let isTouching = false, startX, startY;
@@ -158,8 +234,8 @@
 
             joyHandle.style.transform = `translate(${Math.cos(angle)*dist}px, ${Math.sin(angle)*dist}px)`;
 
-            posX += Math.cos(angle) * (dist / 40) * 1.5;
-            posY += Math.sin(angle) * (dist / 40) * 1.5;
+            posX += Math.cos(angle) * (dist / 40) * 1.2;
+            posY += Math.sin(angle) * (dist / 40) * 1.2;
             posX = Math.max(5, Math.min(95, posX));
             posY = Math.max(5, Math.min(95, posY));
 
