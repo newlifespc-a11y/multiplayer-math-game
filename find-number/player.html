@@ -13,41 +13,41 @@
             user-select: none;
             -webkit-user-select: none;
         }
-        /* สไตล์ปุ่มจอยสติ๊กการ์ตูนสดใส */
+        /* จอยสติ๊กปุ่มการ์ตูนนุ่มนวล สดใส */
         .joystick-base {
-            background: radial-gradient(circle, #fef08a 0%, #fde047 100%);
-            box-shadow: 0 10px 25px rgba(234, 179, 8, 0.4), inset 0 4px 8px rgba(255,255,255,0.8);
+            background: radial-gradient(circle, #fef08a 0%, #facc15 100%);
+            box-shadow: 0 10px 20px rgba(202, 138, 4, 0.3), inset 0 4px 8px rgba(255,255,255,0.8);
         }
         .joystick-handle {
-            background: radial-gradient(circle, #ff7e5f 0%, #feb47b 100%);
-            box-shadow: 0 8px 15px rgba(239, 68, 68, 0.4), inset 0 2px 5px rgba(255,255,255,0.9);
+            background: radial-gradient(circle, #34d399 0%, #059669 100%);
+            box-shadow: 0 6px 15px rgba(5, 150, 105, 0.4), inset 0 2px 5px rgba(255,255,255,0.8);
         }
     </style>
 </head>
-<body class="bg-gradient-to-b from-sky-400 via-sky-200 to-emerald-200 h-screen flex flex-col justify-between p-4 font-sans overflow-hidden">
+<body class="bg-gradient-to-b from-sky-300 via-emerald-100 to-emerald-200 h-screen flex flex-col justify-between p-4 font-sans overflow-hidden">
 
     <!-- Top Info Bar -->
-    <div class="bg-white/90 backdrop-blur-md border-4 border-amber-300 rounded-3xl p-3 shadow-xl flex items-center justify-between">
+    <div class="bg-white/95 backdrop-blur-md border-4 border-emerald-300 rounded-3xl p-3 shadow-lg flex items-center justify-between">
         <div class="flex items-center gap-3">
-            <div id="player-avatar" class="text-4xl bg-amber-100 p-2 rounded-2xl border-2 border-amber-300 shadow-inner">
+            <div id="player-avatar" class="text-4xl bg-emerald-100 p-2 rounded-2xl border-2 border-emerald-300 shadow-inner">
                 🐯
             </div>
             <div>
                 <div id="player-name" class="font-black text-slate-800 text-lg leading-tight">กำลังเข้าสู่เกม...</div>
-                <div class="text-xs font-bold text-sky-600 bg-sky-100 px-2 py-0.5 rounded-full inline-block mt-0.5">🎮 ปุ่มควบคุม</div>
+                <div class="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full inline-block mt-0.5 border border-emerald-200">🎮 จอยสติ๊กควบคุม</div>
             </div>
         </div>
-        <div class="bg-gradient-to-r from-amber-400 to-orange-400 text-white font-black px-4 py-2 rounded-2xl shadow-md border-2 border-white flex flex-col items-center">
-            <span class="text-[10px] uppercase opacity-90">คะแนน</span>
-            <span id="player-score" class="text-xl">0</span>
+        <div class="bg-gradient-to-r from-amber-400 to-yellow-500 text-white font-black px-4 py-2 rounded-2xl shadow-md border-2 border-white flex flex-col items-center">
+            <span class="text-[10px] uppercase tracking-wider opacity-90">คะแนน</span>
+            <span id="player-score" class="text-xl leading-none">0</span>
         </div>
     </div>
 
     <!-- Center Guidance Status -->
     <div class="my-auto text-center px-4">
-        <div id="status-card" class="bg-white/80 backdrop-blur-sm rounded-3xl p-4 border-2 border-sky-300 shadow-lg inline-block">
-            <p id="game-status-text" class="text-base font-black text-sky-800">
-                🌱 บังคับตัวละครวิจัยหาคำตอบบนจอนะครับ!
+        <div id="status-card" class="bg-white/90 backdrop-blur-sm rounded-3xl p-4 border-4 border-emerald-200 shadow-md inline-block">
+            <p id="game-status-text" class="text-base font-black text-emerald-800">
+                🌱 เลื่อนจอยสติ๊กด้านล่าง เพื่อวิ่งไปหาคำตอบนะครับ!
             </p>
         </div>
     </div>
@@ -153,7 +153,7 @@
 
             handle.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
 
-            // Convert movement to map percentage (Speed factor)
+            // ความเร็วการเคลื่อนที่บนแผนที่
             const speed = 1.2;
             let newX = myData.x + (deltaX / maxDistance) * speed;
             let newY = myData.y + (deltaY / maxDistance) * speed;
