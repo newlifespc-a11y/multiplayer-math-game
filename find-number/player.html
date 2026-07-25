@@ -100,7 +100,6 @@
 
             playerRef.onDisconnect().remove();
 
-            // Realtime Sync
             db.ref('players').on('value', (snapshot) => {
                 allPlayers = snapshot.val() || {};
                 renderPlayers();
@@ -138,7 +137,7 @@
                 return `
                 <div class="absolute transition-all duration-75 ease-out flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2 z-20" 
                      style="left: ${x}%; top: ${y}%;">
-                    <div class="text-2xl filter drop-shadow ${isMe ? 'scale-125 ring-2 ring-yellow-400 rounded-full bg-yellow-300/40 p-0.5' : ''}">
+                    <div class="text-xl filter drop-shadow ${isMe ? 'scale-125 ring-2 ring-yellow-400 rounded-full bg-yellow-300/40 p-0.5' : ''}">
                         ${p.avatar || '🐯'}
                     </div>
                     <span class="text-[8px] font-normal ${isMe ? 'bg-yellow-400 text-slate-900 font-bold' : 'bg-slate-900/80 text-white'} px-1 rounded whitespace-nowrap">
@@ -148,6 +147,7 @@
             }).join('');
         }
 
+        // ปรับขนาดป้ายฝั่งผู้เล่นให้กระทัดรัด (w-8 h-8, text-xs)
         function renderOptions() {
             const container = document.getElementById('options-layer');
             if (currentGameState.status !== 'PLAYING' || !currentGameState.options) {
@@ -156,7 +156,7 @@
             }
 
             container.innerHTML = currentGameState.options.map((opt) => `
-                <div class="absolute transform -translate-x-1/2 -translate-y-1/2 bg-white/95 border-2 border-sky-600 text-slate-900 font-black text-base rounded-xl w-10 h-10 flex items-center justify-center shadow z-10"
+                <div class="absolute transform -translate-x-1/2 -translate-y-1/2 bg-white/95 border-2 border-sky-600 text-slate-900 font-black text-xs rounded-lg w-8 h-8 flex items-center justify-center shadow z-10"
                      style="left: ${opt.x}%; top: ${opt.y}%;">
                     ${opt.val}
                 </div>
